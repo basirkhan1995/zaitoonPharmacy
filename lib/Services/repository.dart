@@ -192,17 +192,8 @@ Future<void> deleteCategory(int catId) async {
 
   Future<Prescription> updatePrescription(
       int id, PrescriptionRequest req) async {
-    // Send only the header fields; items are ignored by the server
-    await _api.put('/api/prescriptions/$id', data: {
-      'register_no':  req.registerNo,
-      'patient_name': req.patientName,
-      'gender':       req.gender,
-      'age':          req.age,
-      if (req.address    != null) 'address':     req.address,
-      if (req.doctorName != null) 'doctor_name': req.doctorName,
-      if (req.diagnosis  != null) 'diagnosis':   req.diagnosis,
-      if (req.note       != null) 'note':        req.note,
-    });
+    // Send the full payload — header + items.
+    await _api.put('/api/prescriptions/$id', data: req.toJson());
     return getPrescription(id);
   }
   Future<void> cancelPrescription(int id) async {

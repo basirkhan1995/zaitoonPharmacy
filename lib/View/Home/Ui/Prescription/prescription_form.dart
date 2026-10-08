@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/ztextfield.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
-
 import '../../../../Features/Widgets/z_dialog.dart';
 import '../../../../Features/zdropdown.dart';
 import '../Medicine/bloc/medicine_bloc.dart';
@@ -10,6 +9,7 @@ import '../Medicine/medcine_field.dart';
 import '../Medicine/model/medicine_model.dart';
 import 'bloc/prescription_bloc.dart';
 import 'model/prescription_model.dart';
+
 
 class AddEditPrescriptionForm extends StatefulWidget {
   final Prescription? existing;
@@ -23,10 +23,8 @@ class AddEditPrescriptionForm extends StatefulWidget {
 
 class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
   final _formKey = GlobalKey<FormState>();
-
-  // -----------------------------------------------------------------
-  // Header controllers + focus nodes
-  // -----------------------------------------------------------------
+  bool _itemsPrefilled = false;
+  // Header
   final _registerNo  = TextEditingController();
   final _patientName = TextEditingController();
   final _age         = TextEditingController();
@@ -44,10 +42,45 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
   final _diagnosisFocus = FocusNode(debugLabel: 'diagnosis');
   final _noteFocus      = FocusNode(debugLabel: 'note');
 
-  // Items (only used in add mode)
+  // Items
   final List<PrescriptionItemDraft> _drafts = [];
 
-  List<PrescriptionItem> _existingItems = const [];
+  void _prefillItems(Prescription p) {
+    if (_itemsPrefilled) return;
+    if (p.items.isEmpty) return;      // wait for the bloc's selected state
+
+    // Clear anything currently there
+    for (final d in _drafts) {
+      d.dispose();
+    }
+    _drafts.clear();
+
+    // Rebuild drafts from the loaded items
+    for (final it in p.items) {
+      final draft = PrescriptionItemDraft();
+      draft.medicine = Medicine(
+        medId:   it.medId,
+        medName: it.medName,
+        unit:    it.unit ?? '',
+        dosage:  it.dosage,
+        catId:   0,
+        catName: '',
+      );
+      draft.qty.text         = '${it.quantity}';
+      draft.days.text        = it.durationDays == null
+          ? ''
+          : '${it.durationDays}';
+      draft.instruction.text = it.dosageInstruction ?? '';
+      _drafts.add(draft);
+    }
+
+    if (_drafts.isEmpty) {
+      _addItemRow(focusAfterBuild: false);
+    }
+
+    _itemsPrefilled = true;
+    if (mounted) setState(() {});
+  }
 
   bool get _isEdit => widget.existing != null;
 
@@ -57,6 +90,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
 
     final e = widget.existing;
     if (e != null) {
+      // ----- Prefill header right away -----
       _registerNo.text  = e.registerNo;
       _patientName.text = e.patientName;
       _age.text         = '${e.age}';
@@ -65,16 +99,15 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
       _diagnosis.text   = e.diagnosis ?? '';
       _note.text        = e.note ?? '';
       _gender           = e.gender;
-      _existingItems    = e.items;
+
+      // ----- Try to prefill items now (may be empty if not yet loaded) -----
+      _prefillItems(e);
     } else {
       _addItemRow(focusAfterBuild: false);
     }
 
-    if (!_isEdit) {
-      context.read<MedicineBloc>().add(const MedicineLoadRequested());
-    }
+    context.read<MedicineBloc>().add(const MedicineLoadRequested());
 
-    // Autofocus the register field once the dialog has painted.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _regFocus.requestFocus();
     });
@@ -138,25 +171,6 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    final header = PrescriptionRequest(
-      registerNo:  _registerNo.text.trim(),
-      patientName: _patientName.text.trim(),
-      gender:      _gender,
-      age:         int.tryParse(_age.text.trim()) ?? 0,
-      address:     _address.text.trim().isEmpty ? null : _address.text.trim(),
-      doctorName:  _doctorName.text.trim().isEmpty ? null : _doctorName.text.trim(),
-      diagnosis:   _diagnosis.text.trim().isEmpty ? null : _diagnosis.text.trim(),
-      note:        _note.text.trim().isEmpty ? null : _note.text.trim(),
-      items:       const [],
-    );
-
-    if (_isEdit) {
-      context.read<PrescriptionBloc>().add(
-        PrescriptionUpdateRequested(widget.existing!.prescriptionId, header),
-      );
-      return;
-    }
-
     final items = <PrescriptionItemRequest>[];
     for (int i = 0; i < _drafts.length; i++) {
       final d = _drafts[i];
@@ -181,314 +195,242 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
         durationDays:      days,
       ));
     }
+
     if (items.isEmpty) {
       _toast('Add at least one medicine');
       return;
     }
 
-    final createReq = PrescriptionRequest(
-      registerNo:  header.registerNo,
-      patientName: header.patientName,
-      gender:      header.gender,
-      age:         header.age,
-      address:     header.address,
-      doctorName:  header.doctorName,
-      diagnosis:   header.diagnosis,
-      note:        header.note,
+    final req = PrescriptionRequest(
+      registerNo:  _registerNo.text.trim(),
+      patientName: _patientName.text.trim(),
+      gender:      _gender,
+      age:         int.tryParse(_age.text.trim()) ?? 0,
+      address:     _address.text.trim().isEmpty ? null : _address.text.trim(),
+      doctorName:  _doctorName.text.trim().isEmpty ? null : _doctorName.text.trim(),
+      diagnosis:   _diagnosis.text.trim().isEmpty ? null : _diagnosis.text.trim(),
+      note:        _note.text.trim().isEmpty ? null : _note.text.trim(),
       items:       items,
     );
 
-    context.read<PrescriptionBloc>().add(PrescriptionCreateRequested(createReq));
+    final bloc = context.read<PrescriptionBloc>();
+    if (_isEdit) {
+      bloc.add(PrescriptionUpdateRequested(widget.existing!.prescriptionId, req));
+    } else {
+      bloc.add(PrescriptionCreateRequested(req));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<PrescriptionBloc, PrescriptionState>(
+      // ----- Close dialog when the save/create succeeds -----
+      listenWhen: (prev, curr) => curr is PrescriptionActionSuccess,
       listener: (context, state) {
-        if (state is PrescriptionActionSuccess) {
-          Navigator.of(context).pop(true);
-        }
+        Navigator.of(context).pop(true);
       },
-      child: BlocBuilder<PrescriptionBloc, PrescriptionState>(
-        buildWhen: (p, c) =>
-        (p is PrescriptionSaving) != (c is PrescriptionSaving),
-        builder: (context, state) {
-          final saving = state is PrescriptionSaving;
+      child: BlocListener<PrescriptionBloc, PrescriptionState>(
+        // ----- Prefill items when the API returns the full prescription -----
+        listenWhen: (prev, curr) =>
+        _isEdit &&
+            !_itemsPrefilled &&
+            curr is PrescriptionLoaded &&
+            curr.selected != null &&
+            curr.selected!.items.isNotEmpty,
+        listener: (context, state) {
+          if (state is PrescriptionLoaded && state.selected != null) {
+            _prefillItems(state.selected!);
+          }
+        },
+        child: BlocBuilder<PrescriptionBloc, PrescriptionState>(
+          buildWhen: (p, c) =>
+          (p is PrescriptionSaving) != (c is PrescriptionSaving),
+          builder: (context, state) {
+            final saving = state is PrescriptionSaving;
 
-          return ZFormDialog(
-            title: _isEdit ? 'Edit Prescription' : 'New Prescription',
-            icon: Icons.receipt_long_outlined,
-            width: MediaQuery.of(context).size.width * .6,
-            padding: const EdgeInsets.all(16),
-            isButtonEnabled: !saving,
-            onAction: saving ? null : _submit,
-            actionLabel: saving
-                ? const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            )
-                : Text(_isEdit ? 'Save' : 'Dispense'),
-            child: AbsorbPointer(
-              absorbing: saving,
-              child: Form(
-                key: _formKey,
-                child: SingleChildScrollView(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      if (_isEdit) _infoBanner(context),
+            return ZFormDialog(
+              title: _isEdit ? 'Edit Prescription' : 'New Prescription',
+              icon: Icons.receipt_long_outlined,
+              width: MediaQuery.of(context).size.width * .6,
+              padding: const EdgeInsets.all(16),
+              isButtonEnabled: !saving,
+              onAction: saving ? null : _submit,
+              actionLabel: saving
+                  ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+                  : Text(_isEdit ? 'Save' : 'Dispense'),
+              child: AbsorbPointer(
+                absorbing: saving,
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // -------- Patient section --------
+                        _sectionTitle(
+                            context, AppLocalizations.of(context)!.patient),
+                        const SizedBox(height: 8),
 
-                      _sectionTitle(context, AppLocalizations.of(context)!.patient),
-                      const SizedBox(height: 8),
-
-                      // ---------------- Header row 1 ----------------
-                      Row(children: [
-                        Expanded(
-                          child: ZTextFieldEntitled(
-                            title: AppLocalizations.of(context)!.regNo,
-                            isRequired: true,
-                            controller: _registerNo,
-                            focusNode: _regFocus,
-                            inputAction: TextInputAction.next,
-                            onSubmit: (_) => _nameFocus.requestFocus(),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty)
-                                ? 'Required'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ZTextFieldEntitled(
-                            title: AppLocalizations.of(context)!.patientName,
-                            isRequired: true,
-                            controller: _patientName,
-                            focusNode: _nameFocus,
-                            inputAction: TextInputAction.next,
-                            onSubmit: (_) => _ageFocus.requestFocus(),
-                            validator: (v) =>
-                            (v == null || v.trim().isEmpty)
-                                ? 'Required'
-                                : null,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ZTextFieldEntitled(
-                            title: AppLocalizations.of(context)!.age,
-                            isRequired: true,
-                            controller: _age,
-                            focusNode: _ageFocus,
-                            inputAction: TextInputAction.next,
-                            onSubmit: (_) => _addressFocus.requestFocus(),
-                            validator: (v) {
-                              final n = int.tryParse(v?.trim() ?? '');
-                              return (n == null || n < 0 || n > 150)
-                                  ? '0–150'
-                                  : null;
-                            },
-                          ),
-                        ),
-                      ]),
-                      const SizedBox(height: 18),
-
-                      // ---------------- Header row 2 ----------------
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
+                        Row(children: [
                           Expanded(
-                            flex: 2,
                             child: ZTextFieldEntitled(
-                              title: 'Address',
-                              controller: _address,
-                              focusNode: _addressFocus,
+                              title: AppLocalizations.of(context)!.regNo,
+                              isRequired: true,
+                              controller: _registerNo,
+                              focusNode: _regFocus,
                               inputAction: TextInputAction.next,
-                              onSubmit: (_) => _doctorFocus.requestFocus(),
+                              onSubmit: (_) => _nameFocus.requestFocus(),
+                              validator: (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? 'Required'
+                                  : null,
                             ),
                           ),
                           const SizedBox(width: 12),
                           Expanded(
-                            child: ZDropdown<String>(
-                              title: 'Gender',
-                              items: const ['Male', 'Female'],
-                              itemLabel: (v) => v,
-                              selectedItem: _gender,
-                              initialValue: 'Select gender',
-                              radius: 4,
-                              height: 40,
-                              onItemSelected: (v) =>
-                                  setState(() => _gender = v),
+                            child: ZTextFieldEntitled(
+                              title: AppLocalizations.of(context)!.patientName,
+                              isRequired: true,
+                              controller: _patientName,
+                              focusNode: _nameFocus,
+                              inputAction: TextInputAction.next,
+                              onSubmit: (_) => _ageFocus.requestFocus(),
+                              validator: (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? 'Required'
+                                  : null,
                             ),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-
-                      // ---------------- Header row 3 ----------------
-                      Row(children: [
-                        Expanded(
-                          flex: 2,
-                          child: ZTextFieldEntitled(
-                            title: 'Doctor',
-                            controller: _doctorName,
-                            focusNode: _doctorFocus,
-                            inputAction: TextInputAction.next,
-                            onSubmit: (_) => _diagnosisFocus.requestFocus(),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: ZTextFieldEntitled(
+                              title: AppLocalizations.of(context)!.age,
+                              isRequired: true,
+                              controller: _age,
+                              focusNode: _ageFocus,
+                              inputAction: TextInputAction.next,
+                              onSubmit: (_) => _addressFocus.requestFocus(),
+                              validator: (v) {
+                                final n = int.tryParse(v?.trim() ?? '');
+                                return (n == null || n < 0 || n > 150)
+                                    ? '0–150'
+                                    : null;
+                              },
+                            ),
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 2,
-                          child: ZTextFieldEntitled(
-                            title: 'Diagnosis',
-                            controller: _diagnosis,
-                            focusNode: _diagnosisFocus,
-                            onSubmit: (_) => _noteFocus.requestFocus(),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          flex: 3,
-                          child: ZTextFieldEntitled(
-                            title: 'Note',
-                            controller: _note,
-                            focusNode: _noteFocus,
-                            inputAction: TextInputAction.done,
-                            onSubmit: (_) {
-                              if (!_isEdit && _drafts.isNotEmpty) {
-                                _drafts.first.medicineFocus.requestFocus();
-                              }
-                            },
-                          ),
-                        ),
-                      ]),
+                        ]),
+                        const SizedBox(height: 18),
 
-                      const SizedBox(height: 20),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: ZTextFieldEntitled(
+                                title: 'Address',
+                                controller: _address,
+                                focusNode: _addressFocus,
+                                inputAction: TextInputAction.next,
+                                onSubmit: (_) => _doctorFocus.requestFocus(),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: ZDropdown<String>(
+                                title: 'Gender',
+                                items: const ['Male', 'Female'],
+                                itemLabel: (v) => v,
+                                selectedItem: _gender,
+                                initialValue: 'Select gender',
+                                radius: 4,
+                                height: 40,
+                                onItemSelected: (v) =>
+                                    setState(() => _gender = v),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
 
-                      if (_isEdit)
-                        _editItemsSection(context)
-                      else
-                        _addItemsSection(context),
-                    ],
+                        Row(children: [
+                          Expanded(
+                            flex: 2,
+                            child: ZTextFieldEntitled(
+                              title: 'Doctor',
+                              controller: _doctorName,
+                              focusNode: _doctorFocus,
+                              inputAction: TextInputAction.next,
+                              onSubmit: (_) => _diagnosisFocus.requestFocus(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 2,
+                            child: ZTextFieldEntitled(
+                              title: 'Diagnosis',
+                              controller: _diagnosis,
+                              focusNode: _diagnosisFocus,
+                              onSubmit: (_) => _noteFocus.requestFocus(),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            flex: 3,
+                            child: ZTextFieldEntitled(
+                              title: 'Note',
+                              controller: _note,
+                              focusNode: _noteFocus,
+                              inputAction: TextInputAction.done,
+                              onSubmit: (_) {
+                                if (_drafts.isNotEmpty) {
+                                  _drafts.first.medicineFocus.requestFocus();
+                                }
+                              },
+                            ),
+                          ),
+                        ]),
+
+                        const SizedBox(height: 20),
+
+                        // -------- Medicines section --------
+                        Row(children: [
+                          Expanded(child: _sectionTitle(context, 'Medicines')),
+                          TextButton.icon(
+                            onPressed: () => _addItemRow(),
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add medicine'),
+                          ),
+                        ]),
+                        const SizedBox(height: 4),
+                        ...List.generate(_drafts.length, (i) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 10),
+                            child: PrescriptionItemRow(
+                              key: ValueKey(_drafts[i]),
+                              draft: _drafts[i],
+                              index: i + 1,
+                              onRemove: _drafts.length > 1
+                                  ? () => _removeItemRow(i)
+                                  : null,
+                              onSubmitLastField: () => _addItemRow(),
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  // -----------------------------------------------------------------
-  // Sections
-  // -----------------------------------------------------------------
-  Widget _infoBanner(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(children: [
-        Icon(Icons.info_outline, size: 18, color: scheme.onTertiaryContainer),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            'Only patient details can be edited. To change the medicines, cancel this prescription and create a new one.',
-            style: TextStyle(fontSize: 12, color: scheme.onTertiaryContainer),
-          ),
+            );
+          },
         ),
-      ]),
+      ),
     );
   }
-
-  Widget _addItemsSection(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Row(children: [
-          Expanded(child: _sectionTitle(context, 'Medicines')),
-          TextButton.icon(
-            onPressed: () => _addItemRow(),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add medicine'),
-          ),
-        ]),
-        const SizedBox(height: 4),
-        ...List.generate(_drafts.length, (i) {
-          return Padding(
-            padding: const EdgeInsets.only(bottom: 10),
-            child: PrescriptionItemRow(
-              key: ValueKey(_drafts[i]),
-              draft: _drafts[i],
-              index: i + 1,
-              onRemove: _drafts.length > 1 ? () => _removeItemRow(i) : null,
-              onSubmitLastField: () => _addItemRow(),
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _editItemsSection(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _sectionTitle(context, 'Medicines'),
-        const SizedBox(height: 8),
-        if (_existingItems.isEmpty)
-          const Text('Loading items…')
-        else
-          ..._existingItems.map((it) => Container(
-            margin: const EdgeInsets.only(bottom: 8),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: scheme.surfaceContainer,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${it.medName}'
-                          '${it.dosage != null && it.dosage!.isNotEmpty ? " · ${it.dosage}" : ""}',
-                      style: const TextStyle(fontWeight: FontWeight.w600),
-                    ),
-                    if (it.dosageInstruction != null) ...[
-                      const SizedBox(height: 2),
-                      Text(
-                        it.dosageInstruction!,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-              Text(
-                'x${it.quantity}',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-            ]),
-          )),
-      ],
-    );
-  }
-
   Widget _sectionTitle(BuildContext context, String text) {
     final scheme = Theme.of(context).colorScheme;
     return Text(
