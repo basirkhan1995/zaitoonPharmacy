@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/toast.dart';
+import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
+
 import '../Settings/Ui/Category/bloc/category_bloc.dart';
 import 'add_edit_med.dart';
 import 'bloc/medicine_bloc.dart';
@@ -33,14 +35,11 @@ class _MedicineViewState extends State<MedicineView> {
   }
 
   void _onSearchChanged(String value) {
-    // Rebuild so the clear (×) icon appears/disappears
     setState(() {});
-
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), () {
       if (!mounted) return;
       final term = value.trim();
-      debugPrint('UI search → "$term"');   // ← debug
       context.read<MedicineBloc>().add(MedicineLoadRequested(search: term));
     });
   }
@@ -48,6 +47,10 @@ class _MedicineViewState extends State<MedicineView> {
   void _clearSearch() {
     _searchCtrl.clear();
     setState(() {});
+    context.read<MedicineBloc>().add(const MedicineLoadRequested());
+  }
+
+  void _reload() {
     context.read<MedicineBloc>().add(const MedicineLoadRequested());
   }
 
@@ -122,21 +125,6 @@ class _MedicineViewState extends State<MedicineView> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(AppLocalizations.of(context)!.medicine),
-        actionsPadding: EdgeInsets.all(8),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Reload',
-            onPressed: () => context
-                .read<MedicineBloc>()
-                .add(const MedicineLoadRequested()),
-          ),
-        ],
-      ),
       body: BlocListener<MedicineBloc, MedicineState>(
         listener: (context, state) {
           if (state is MedicineFailure) {
@@ -158,13 +146,71 @@ class _MedicineViewState extends State<MedicineView> {
         },
         child: Column(
           children: [
+            // =====================================================
+            // HEADER
+            // =====================================================
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Icon badge
+                  Icon(
+                    Icons.medical_information_outlined,
+                    size: 28,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Title
+                  Expanded(
+                    child: Text(
+                      AppLocalizations.of(context)!.medicine,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
+
+                  // Actions
+                  Row(
+                    spacing: 8,
+                    children: [
+                      ZOutlineButton(
+                        onPressed: _reload,
+                        icon: Icons.refresh,
+                        label: const Text('Refresh'),
+                      ),
+                      ZOutlineButton(
+                        onPressed: () => _openAddEdit(),
+                        icon: Icons.add,
+                        isActive: true,
+                        label: const Text('New Medicine'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            // =====================================================
+            // SEARCH BAR
+            // =====================================================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
               child: TextField(
                 controller: _searchCtrl,
                 onChanged: _onSearchChanged,
                 textInputAction: TextInputAction.search,
-                onSubmitted: (v) => context.read<MedicineBloc>().add(MedicineLoadRequested(search: v.trim())),
+                onSubmitted: (v) => context
+                    .read<MedicineBloc>()
+                    .add(MedicineLoadRequested(search: v.trim())),
                 decoration: InputDecoration(
                   hintText: 'Search medicine',
                   prefixIcon: const Icon(Icons.search, size: 20),
@@ -177,24 +223,35 @@ class _MedicineViewState extends State<MedicineView> {
                   ),
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(
-                      vertical: 18, horizontal: 12),
+                      vertical: 10, horizontal: 12),
                   filled: true,
                   fillColor: scheme.surfaceContainerLow,
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(3),
+                    borderSide: BorderSide(
+                      color: scheme.outline.withValues(alpha: 0.3),
+                    ),
                   ),
                   enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide.none,
+                    borderRadius: BorderRadius.circular(3),
+                    borderSide: BorderSide(
+                      color: scheme.outline.withValues(alpha: 0.3),
+                    ),
                   ),
                   focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(5),
-                    borderSide: BorderSide(color: scheme.primary, width: 1.2),
+                    borderRadius: BorderRadius.circular(3),
+                    borderSide: BorderSide(
+                      color: scheme.primary,
+                      width: 1.1,
+                    ),
                   ),
                 ),
               ),
             ),
+
+            // =====================================================
+            // LIST
+            // =====================================================
             Expanded(
               child: BlocBuilder<MedicineBloc, MedicineState>(
                 builder: (context, state) {
@@ -204,9 +261,7 @@ class _MedicineViewState extends State<MedicineView> {
                   if (state is MedicineFailure) {
                     return _ErrorView(
                       message: state.message,
-                      onRetry: () => context
-                          .read<MedicineBloc>()
-                          .add(const MedicineLoadRequested()),
+                      onRetry: _reload,
                     );
                   }
 
@@ -220,13 +275,9 @@ class _MedicineViewState extends State<MedicineView> {
                   }
 
                   return RefreshIndicator(
-                    onRefresh: () async {
-                      context
-                          .read<MedicineBloc>()
-                          .add(const MedicineLoadRequested());
-                    },
+                    onRefresh: () async => _reload(),
                     child: ListView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 96),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
                       itemCount: items.length,
                       itemBuilder: (_, i) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
@@ -245,17 +296,12 @@ class _MedicineViewState extends State<MedicineView> {
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddEdit(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Medicine'),
-      ),
     );
   }
 }
 
 // =====================================================================
-// Card — stock qty now sits at the end, just before the popup menu
+// Card
 // =====================================================================
 class _MedicineCard extends StatelessWidget {
   final Medicine medicine;
@@ -285,7 +331,6 @@ class _MedicineCard extends StatelessWidget {
           padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
           child: Row(
             children: [
-              // ---- Initial avatar ----
               Container(
                 width: 44,
                 height: 44,
@@ -307,7 +352,6 @@ class _MedicineCard extends StatelessWidget {
               ),
               const SizedBox(width: 14),
 
-              // ---- Main info ----
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -324,7 +368,13 @@ class _MedicineCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Text(
                       [
-                        if (medicine.dosage != null && medicine.dosage!.isNotEmpty) medicine.dosage!, medicine.catName, medicine.companyBrand
+                        if (medicine.dosage != null &&
+                            medicine.dosage!.isNotEmpty)
+                          medicine.dosage!,
+                        medicine.catName,
+                        if (medicine.companyBrand != null &&
+                            medicine.companyBrand!.isNotEmpty)
+                          medicine.companyBrand!,
                       ].join('  •  '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -333,16 +383,15 @@ class _MedicineCard extends StatelessWidget {
                         color: scheme.onSurfaceVariant,
                       ),
                     ),
-
                   ],
                 ),
               ),
 
               const SizedBox(width: 8),
 
-              // ---- Stock qty pill (compact) ----
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                padding:
+                const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                 decoration: BoxDecoration(
                   color: hasStock
                       ? scheme.secondaryContainer
@@ -350,7 +399,9 @@ class _MedicineCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  hasStock ? '${medicine.availableStock}' : AppLocalizations.of(context)!.noStock,
+                  hasStock
+                      ? '${medicine.availableStock}'
+                      : AppLocalizations.of(context)!.noStock,
                   style: TextStyle(
                     fontSize: 12.5,
                     fontWeight: FontWeight.w600,
@@ -363,7 +414,6 @@ class _MedicineCard extends StatelessWidget {
 
               const SizedBox(width: 4),
 
-              // ---- Popup menu ----
               PopupMenuButton<_MenuAction>(
                 tooltip: 'More',
                 icon: Icon(Icons.more_vert,
@@ -419,6 +469,9 @@ class _MedicineCard extends StatelessWidget {
 
 enum _MenuAction { edit, delete }
 
+// =====================================================================
+// Empty view
+// =====================================================================
 class _EmptyView extends StatelessWidget {
   final bool hasSearch;
   const _EmptyView({required this.hasSearch});
@@ -450,7 +503,7 @@ class _EmptyView extends StatelessWidget {
             Text(
               hasSearch
                   ? 'Try a different search term'
-                  : 'Tap "Add Medicine" to get started',
+                  : 'Tap "New Medicine" to get started',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 13,
@@ -464,6 +517,9 @@ class _EmptyView extends StatelessWidget {
   }
 }
 
+// =====================================================================
+// Error view
+// =====================================================================
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;

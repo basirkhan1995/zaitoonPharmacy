@@ -281,26 +281,17 @@ class _PrescriptionViewState extends State<PrescriptionView> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // ---- Icon badge ----
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(5),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(
-                      Icons.receipt_long_outlined,
-                      size: 22,
-                      color: scheme.onPrimaryContainer,
-                    ),
+                  Icon(
+                    Icons.receipt_long_outlined,
+                    size: 28,
+                    color: scheme.onPrimaryContainer,
                   ),
                   const SizedBox(width: 12),
 
                   // ---- Title ----
                   Expanded(
                     child: Text(
-                      AppLocalizations.of(context)!.prescriptions,
+                      AppLocalizations.of(context)!.prescription,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.headlineSmall?.copyWith(

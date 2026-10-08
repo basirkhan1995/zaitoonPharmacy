@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:zpharmacy/Features/Date/z_range_picker.dart';
 import 'package:zpharmacy/Features/Widgets/toast.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
+import 'package:zpharmacy/Features/zdropdown.dart';
 import 'package:zpharmacy/View/Home/Ui/Stock/stock_details.dart';
+import 'package:zpharmacy/l10n/app_localizations.dart';
+
 import 'bloc/stock_bloc.dart';
 import 'model/stock_model.dart';
 import 'stock_form.dart';
@@ -16,13 +20,74 @@ class StockView extends StatefulWidget {
 }
 
 class _StockViewState extends State<StockView> {
+  // ---------------- Filters (what goes to the API) ----------------
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
-  String? _typeFilter;
 
+  String _movementLabel = 'All';
+  String? _fromDate;   // null = no date filter
+  String? _toDate;
+  bool _scopeAll = false;
+
+  // ---------------- Picker display (always valid) ----------------
+  late String _pickerStart;   // 'YYYY-MM-DD'
+  late String _pickerEnd;
+
+  static const _movementOptions = [
+    'All',
+    'Received',
+    'Donation In',
+    'Donation Out',
+    'Damage',
+    'Expired',
+    'Adjustment',
+  ];
+
+  // -----------------------------------------------------------------
+  // Helpers
+  // -----------------------------------------------------------------
+  String _fmt(DateTime d) =>
+      '${d.year}-${d.month.toString().padLeft(2, '0')}-'
+          '${d.day.toString().padLeft(2, '0')}';
+
+  String? get _movementValue {
+    switch (_movementLabel) {
+      case 'Received':     return 'RECEIVE';
+      case 'Donation In':  return 'DONATION_IN';
+      case 'Donation Out': return 'DONATION_OUT';
+      case 'Damage':       return 'DAMAGE';
+      case 'Expired':      return 'EXPIRED';
+      case 'Adjustment':   return 'ADJUSTMENT';
+      default:             return null;
+    }
+  }
+
+  bool get _hasCustomDates => _fromDate != null && _toDate != null;
+
+  void _reload() {
+    context.read<StockBloc>().add(StockLoadRequested(
+      search: _searchCtrl.text.trim().isEmpty
+          ? null
+          : _searchCtrl.text.trim(),
+      movementType: _movementValue,
+      from: _scopeAll ? null : _fromDate,
+      to:   _scopeAll ? null : _toDate,
+    ));
+  }
+
+  // -----------------------------------------------------------------
+  // Lifecycle
+  // -----------------------------------------------------------------
   @override
   void initState() {
     super.initState();
+    final now = DateTime.now();
+    final start = now.subtract(const Duration(days: 30));
+    _pickerStart = _fmt(start);
+    _pickerEnd   = _fmt(now);
+    _fromDate    = _pickerStart;
+    _toDate      = _pickerEnd;
+    // Initial load: last 30 days
     _reload();
   }
 
@@ -33,19 +98,61 @@ class _StockViewState extends State<StockView> {
     super.dispose();
   }
 
-  void _reload() {
-    context.read<StockBloc>().add(StockLoadRequested(
-      search: _searchCtrl.text.trim().isEmpty ? null : _searchCtrl.text.trim(),
-      movementType: _typeFilter,
-    ));
-  }
-
+  // -----------------------------------------------------------------
+  // Filter handlers
+  // -----------------------------------------------------------------
   void _onSearchChanged(String _) {
     setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 350), _reload);
   }
 
+  void _clearSearch() {
+    _searchCtrl.clear();
+    setState(() {});
+    _reload();
+  }
+
+  void _setLast30Days() {
+    final now = DateTime.now();
+    final start = now.subtract(const Duration(days: 30));
+    setState(() {
+      _pickerStart = _fmt(start);
+      _pickerEnd   = _fmt(now);
+      _fromDate    = _pickerStart;
+      _toDate      = _pickerEnd;
+      _scopeAll    = false;
+    });
+    _reload();
+  }
+
+  void _setAllTime() {
+    setState(() {
+      _scopeAll = true;
+      _fromDate = null;
+      _toDate   = null;
+    });
+    _reload();
+  }
+
+  void _clearDates() {
+    _setLast30Days();
+  }
+
+  void _onDateRangeChanged(String start, String end) {
+    setState(() {
+      _pickerStart = start;
+      _pickerEnd   = end;
+      _fromDate    = start;
+      _toDate      = end;
+      _scopeAll    = false;
+    });
+    _reload();
+  }
+
+  // -----------------------------------------------------------------
+  // Add / View / Edit / Cancel
+  // -----------------------------------------------------------------
   Future<void> _openAdd() async {
     final bloc = context.read<StockBloc>();
     await showDialog<bool>(
@@ -94,7 +201,8 @@ class _StockViewState extends State<StockView> {
         return AlertDialog(
           elevation: 0,
           backgroundColor: scheme.surfaceContainer,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          shape:
+          RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           title: Text('Delete ${inv.invoiceNo}?'),
           content: const Text(
               'This reverses all movements on this invoice. It fails if any inbound batch has been dispensed from.'),
@@ -130,6 +238,9 @@ class _StockViewState extends State<StockView> {
     }
   }
 
+  // -----------------------------------------------------------------
+  // Build
+  // -----------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -157,20 +268,32 @@ class _StockViewState extends State<StockView> {
         },
         child: Column(
           children: [
+            // =====================================================
+            // HEADER
+            // =====================================================
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Icon(Icons.medical_information_outlined,
-                      size: 28, color: scheme.onPrimaryContainer),
+                  Icon(
+                    Icons.medical_information_outlined,
+                    size: 28,
+                    color: scheme.onPrimaryContainer,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Stock',
+                      AppLocalizations.of(context)!.stock,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                          ?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
                     ),
                   ),
                   Row(
@@ -193,83 +316,156 @@ class _StockViewState extends State<StockView> {
               ),
             ),
 
+            // =====================================================
+            // FILTER BAR
+            // =====================================================
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 children: [
-                  TextField(
-                    controller: _searchCtrl,
-                    onChanged: _onSearchChanged,
-                    decoration: InputDecoration(
-                      hintText: 'Search invoice or organization',
-                      prefixIcon: const Icon(Icons.search, size: 20),
-                      suffixIcon: _searchCtrl.text.isEmpty
-                          ? null
-                          : IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        onPressed: () {
-                          _searchCtrl.clear();
-                          setState(() {});
-                          _reload();
-                        },
+                  // -------- Row: search + date range + movement --------
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Search
+                      Expanded(
+                        flex: 6,
+                        child: TextField(
+                          controller: _searchCtrl,
+                          onChanged: _onSearchChanged,
+                          textInputAction: TextInputAction.search,
+                          onSubmitted: (_) => _reload(),
+                          decoration: InputDecoration(
+                            hintText: 'Search invoice or organization',
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            suffixIcon: _searchCtrl.text.isEmpty
+                                ? null
+                                : IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              tooltip: 'Clear',
+                              onPressed: _clearSearch,
+                            ),
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 10, horizontal: 12),
+                            filled: true,
+                            fillColor: scheme.surfaceContainerLow,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(3),
+                              borderSide: BorderSide(
+                                color: scheme.outline.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(3),
+                              borderSide: BorderSide(
+                                color: scheme.outline.withValues(alpha: 0.3),
+                              ),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(3),
+                              borderSide: BorderSide(
+                                color: scheme.primary,
+                                width: 1.1,
+                              ),
+                            ),
+                          ),
+                        ),
                       ),
-                      isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 10, horizontal: 12),
-                      filled: true,
-                      fillColor: scheme.surfaceContainerLow,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(3),
-                        borderSide: BorderSide(
-                            color: scheme.outline.withValues(alpha: 0.3)),
+                      const SizedBox(width: 10),
+
+                      // Date range picker
+                      Expanded(
+                        flex: 3,
+                        child: ZRangeDatePicker(
+                          label: 'Date range',
+                          initialStartDate: DateTime.tryParse(_pickerStart),
+                          initialEndDate: DateTime.tryParse(_pickerEnd),
+                          startValue: _pickerStart,
+                          endValue: _pickerEnd,
+                          onStartDateChanged: (start) {
+                            setState(() => _pickerStart = start);
+                          },
+                          onEndDateChanged: (end) {
+                            setState(() => _pickerEnd = end);
+                            if (_pickerStart.isNotEmpty &&
+                                _pickerEnd.isNotEmpty) {
+                              _onDateRangeChanged(_pickerStart, _pickerEnd);
+                            }
+                          },
+                          minYear: 2020,
+                          maxYear: 2100,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+
+                      // Movement type dropdown
+                      Expanded(
+                        flex: 2,
+                        child: ZDropdown<String>(
+                          title: 'Type',
+                          items: _movementOptions,
+                          itemLabel: (v) => v,
+                          selectedItem: _movementLabel,
+                          initialValue: 'All',
+                          radius: 4,
+                          height: 40,
+                          onItemSelected: (v) {
+                            setState(() => _movementLabel = v);
+                            _reload();
+                          },
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      children: [
-                        _TypeChip(label: 'All',
-                            selected: _typeFilter == null,
-                            onTap: () { setState(() => _typeFilter = null); _reload(); }),
+                  const SizedBox(height: 10),
+
+                  // -------- Quick chips --------
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _Chip(
+                        label: 'Last 30 days',
+                        icon: Icons.history,
+                        selected: _hasCustomDates &&
+                            !_scopeAll &&
+                            _pickerStart ==
+                                _fmt(DateTime.now()
+                                    .subtract(const Duration(days: 30))) &&
+                            _pickerEnd == _fmt(DateTime.now()),
+                        onTap: _setLast30Days,
+                      ),
+                      const SizedBox(width: 8),
+                      _Chip(
+                        label: 'All time',
+                        icon: Icons.all_inclusive,
+                        selected: _scopeAll && !_hasCustomDates,
+                        onTap: _setAllTime,
+                      ),
+                      if (_hasCustomDates && !_scopeAll) ...[
                         const SizedBox(width: 8),
-                        _TypeChip(label: 'Received',
-                            icon: Icons.move_to_inbox_outlined,
-                            selected: _typeFilter == 'RECEIVE',
-                            onTap: () { setState(() => _typeFilter = 'RECEIVE'); _reload(); }),
-                        const SizedBox(width: 8),
-                        _TypeChip(label: 'Donated In',
-                            icon: Icons.volunteer_activism_outlined,
-                            selected: _typeFilter == 'DONATION_IN',
-                            onTap: () { setState(() => _typeFilter = 'DONATION_IN'); _reload(); }),
-                        const SizedBox(width: 8),
-                        _TypeChip(label: 'Donated Out',
-                            icon: Icons.outbox_outlined,
-                            selected: _typeFilter == 'DONATION_OUT',
-                            onTap: () { setState(() => _typeFilter = 'DONATION_OUT'); _reload(); }),
-                        const SizedBox(width: 8),
-                        _TypeChip(label: 'Damage',
-                            icon: Icons.report_gmailerrorred_outlined,
-                            selected: _typeFilter == 'DAMAGE',
-                            onTap: () { setState(() => _typeFilter = 'DAMAGE'); _reload(); }),
-                        const SizedBox(width: 8),
-                        _TypeChip(label: 'Expired',
-                            icon: Icons.schedule_outlined,
-                            selected: _typeFilter == 'EXPIRED',
-                            onTap: () { setState(() => _typeFilter = 'EXPIRED'); _reload(); }),
-                        const SizedBox(width: 8),
-                        _TypeChip(label: 'Adjustment',
-                            icon: Icons.tune_outlined,
-                            selected: _typeFilter == 'ADJUSTMENT',
-                            onTap: () { setState(() => _typeFilter = 'ADJUSTMENT'); _reload(); }),
+                        _Chip(
+                          label: '$_fromDate → $_toDate',
+                          icon: Icons.date_range_outlined,
+                          selected: true,
+                          onTap: () {},
+                          trailing: Icon(
+                            Icons.close,
+                            size: 14,
+                            color: scheme.onSecondaryContainer,
+                          ),
+                          onTrailingTap: _clearDates,
+                        ),
                       ],
-                    ),
+                    ],
                   ),
                 ],
               ),
             ),
 
+            // =====================================================
+            // LIST
+            // =====================================================
             Expanded(
               child: BlocBuilder<StockBloc, StockState>(
                 builder: (context, state) {
@@ -277,7 +473,30 @@ class _StockViewState extends State<StockView> {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (state is StockFailure) {
-                    return Center(child: Text(state.message));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.error_outline,
+                                size: 56, color: scheme.error),
+                            const SizedBox(height: 12),
+                            Text(
+                              state.message,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: scheme.error),
+                            ),
+                            const SizedBox(height: 16),
+                            OutlinedButton.icon(
+                              onPressed: _reload,
+                              icon: const Icon(Icons.refresh),
+                              label: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   }
 
                   final items = state is StockWithItems
@@ -285,7 +504,12 @@ class _StockViewState extends State<StockView> {
                       : const <StockInvoice>[];
 
                   if (items.isEmpty) {
-                    return const Center(child: Text('No stock invoices yet'));
+                    return _EmptyState(
+                      search: _searchCtrl.text.trim(),
+                      scopeAll: _scopeAll,
+                      hasCustomDates: _hasCustomDates,
+                      movementLabel: _movementLabel,
+                    );
                   }
 
                   return RefreshIndicator(
@@ -314,22 +538,30 @@ class _StockViewState extends State<StockView> {
   }
 }
 
-class _TypeChip extends StatelessWidget {
+// =====================================================================
+// Chip
+// =====================================================================
+class _Chip extends StatelessWidget {
   final String label;
   final IconData? icon;
   final bool selected;
   final VoidCallback onTap;
+  final Widget? trailing;
+  final VoidCallback? onTrailingTap;
 
-  const _TypeChip({
+  const _Chip({
     required this.label,
     this.icon,
     required this.selected,
     required this.onTap,
+    this.trailing,
+    this.onTrailingTap,
   });
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+
     return Material(
       color: selected ? scheme.secondaryContainer : scheme.surfaceContainerLow,
       borderRadius: BorderRadius.circular(20),
@@ -342,11 +574,13 @@ class _TypeChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (icon != null) ...[
-                Icon(icon,
-                    size: 14,
-                    color: selected
-                        ? scheme.onSecondaryContainer
-                        : scheme.onSurfaceVariant),
+                Icon(
+                  icon,
+                  size: 14,
+                  color: selected
+                      ? scheme.onSecondaryContainer
+                      : scheme.onSurfaceVariant,
+                ),
                 const SizedBox(width: 6),
               ],
               Text(
@@ -359,6 +593,13 @@ class _TypeChip extends StatelessWidget {
                       : scheme.onSurfaceVariant,
                 ),
               ),
+              if (trailing != null) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: onTrailingTap,
+                  child: trailing!,
+                ),
+              ],
             ],
           ),
         ),
@@ -367,6 +608,85 @@ class _TypeChip extends StatelessWidget {
   }
 }
 
+// =====================================================================
+// Empty state
+// =====================================================================
+class _EmptyState extends StatelessWidget {
+  final String search;
+  final bool scopeAll;
+  final bool hasCustomDates;
+  final String movementLabel;
+
+  const _EmptyState({
+    required this.search,
+    required this.scopeAll,
+    required this.hasCustomDates,
+    required this.movementLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    String message;
+    IconData icon;
+    if (search.isNotEmpty) {
+      message = 'No invoices match "$search"';
+      icon = Icons.search_off;
+    } else if (movementLabel != 'All') {
+      message = 'No "$movementLabel" invoices in this period';
+      icon = Icons.filter_alt_off_outlined;
+    } else if (hasCustomDates && !scopeAll) {
+      message = 'No invoices in this date range';
+      icon = Icons.date_range_outlined;
+    } else if (scopeAll) {
+      message = 'No invoices yet';
+      icon = Icons.receipt_long_outlined;
+    } else {
+      message = 'No invoices in the last 30 days';
+      icon = Icons.history;
+    }
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              icon,
+              size: 56,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Try a different filter',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                color: scheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// =====================================================================
+// Invoice card (unchanged)
+// =====================================================================
 class _InvoiceCard extends StatelessWidget {
   final StockInvoice invoice;
   final VoidCallback onTap;
@@ -389,7 +709,8 @@ class _InvoiceCard extends StatelessWidget {
       invoice.invoiceDate,
       '${invoice.itemCount} line${invoice.itemCount == 1 ? '' : 's'}',
       '${invoice.totalQty} units',
-      if (invoice.orgName != null && invoice.orgName!.isNotEmpty) invoice.orgName!,
+      if (invoice.orgName != null && invoice.orgName!.isNotEmpty)
+        invoice.orgName!,
     ].join('  ·  ');
 
     return Material(
