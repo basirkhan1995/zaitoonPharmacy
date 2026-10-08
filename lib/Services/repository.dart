@@ -4,6 +4,7 @@ import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
 import '../View/Home/Ui/Settings/Ui/Category/model/med_category_model.dart';
+import '../View/Home/Ui/Stock/model/stock_model.dart';
 import 'api_services.dart';
 
 class Repositories {
@@ -170,8 +171,26 @@ Future<void> deleteCategory(int catId) async {
 // PRESCRIPTION
 // =================================================================
 
-  Future<List<Prescription>> getPrescriptions() async {
-    final data = await _api.get('/api/prescriptions');
+  Future<List<Prescription>> getPrescriptions({
+    String? search,
+    String? from,
+    String? to,
+    String? status,
+    bool scopeAll = false,
+  }) async {
+    final qp = <String, dynamic>{};
+
+    if (search != null && search.isNotEmpty) qp['search'] = search;
+    if (from   != null && from.isNotEmpty)   qp['from']   = from;
+    if (to     != null && to.isNotEmpty)     qp['to']     = to;
+    if (status != null && status.isNotEmpty) qp['status'] = status;
+    if (scopeAll) qp['scope'] = 'all';
+
+    final data = await _api.get(
+      '/api/prescriptions',
+      queryParams: qp.isEmpty ? null : qp,
+    );
+
     return (data as List)
         .map((e) => Prescription.fromJson(e as Map<String, dynamic>))
         .toList();
@@ -198,6 +217,70 @@ Future<void> deleteCategory(int catId) async {
   }
   Future<void> cancelPrescription(int id) async {
     await _api.delete('/api/prescriptions/$id');
+  }
+
+  // =================================================================
+// STOCK — invoices
+// =================================================================
+  Future<List<StockInvoice>> getStockInvoices({
+    String? search,
+    String? from,
+    String? to,
+    String? movementType,
+  }) async {
+    final qp = <String, dynamic>{};
+    if (search != null && search.isNotEmpty)       qp['search']        = search;
+    if (from != null && from.isNotEmpty)           qp['from']          = from;
+    if (to != null && to.isNotEmpty)               qp['to']            = to;
+    if (movementType != null && movementType.isNotEmpty) {
+      qp['movement_type'] = movementType;
+    }
+
+    final data = await _api.get('/api/stock',
+        queryParams: qp.isEmpty ? null : qp);
+
+    return (data as List)
+        .map((e) => StockInvoice.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<StockInvoice> getStockInvoice(int id) async {
+    final data = await _api.get('/api/stock/$id');
+    return StockInvoice.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<StockInvoice> createStockInvoice(StockInvoiceRequest req) async {
+    final data = await _api.post('/api/stock', data: req.toJson());
+    final id = (data['invoice_id'] as num).toInt();
+    return getStockInvoice(id);
+  }
+
+  Future<StockInvoice> updateStockInvoice(int id, StockInvoiceRequest req) async {
+    await _api.put('/api/stock/$id', data: req.toJson());
+    return getStockInvoice(id);
+  }
+
+  Future<void> deleteStockInvoice(int id) async {
+    await _api.delete('/api/stock/$id');
+  }
+
+  Future<List<StockBatchOption>> getActiveBatches({String? search}) async {
+    final data = await _api.get(
+      '/api/stock/batches/all',
+      queryParams: (search != null && search.isNotEmpty) ? {'search': search} : null,
+    );
+    return (data as List)
+        .map((e) => StockBatchOption(
+      batchId:          (e['batch_id'] as num).toInt(),
+      medId:            (e['med_id'] as num).toInt(),
+      medName:          e['med_name'] as String? ?? '',
+      unit:             e['unit'] as String?,
+      dosage:           e['dosage'] as String?,
+      batchNo:          e['batch_no'] as String? ?? '',
+      expiryDate:       (e['expiry_date'] as String).substring(0, 10),
+      quantityRemaining:(e['quantity_remaining'] as num).toInt(),
+    ))
+        .toList();
   }
 
 }

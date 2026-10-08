@@ -2,9 +2,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Services/repository.dart';
 import 'package:zpharmacy/View/Auth/auth.dart';
 import 'package:zpharmacy/View/Auth/bloc/auth_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Medicine/batch_bloc/batch_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Organization/bloc/organization_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/bloc/prescription_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Stock/bloc/stock_bloc.dart';
 import 'package:zpharmacy/View/Home/bloc/menu_bloc.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -35,6 +37,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => CategoryBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => OrganizationBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => PrescriptionBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => StockBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => BatchBloc(Repositories(ApiServices()))),
       ],
       child: BlocBuilder<LocalizationBloc, Locale>(
         builder: (context, locale) {

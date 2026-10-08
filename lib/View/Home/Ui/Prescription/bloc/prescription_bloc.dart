@@ -36,11 +36,21 @@ class PrescriptionBloc extends Bloc<PrescriptionEvent, PrescriptionState> {
       emit(PrescriptionFailure(e.message));
     }
   }
-  Future<void> _onLoad(PrescriptionLoadRequested event,
-      Emitter<PrescriptionState> emit) async {
+  Future<void> _onLoad(
+      PrescriptionLoadRequested event,
+      Emitter<PrescriptionState> emit,
+      ) async {
     emit(const PrescriptionLoading());
+
     try {
-      final items = await _repo.getPrescriptions();
+      final items = await _repo.getPrescriptions(
+        search: event.search,
+        from: event.from,
+        to: event.to,
+        status: event.status,
+        scopeAll: event.scopeAll,
+      );
+
       emit(PrescriptionLoaded(items));
     } on ApiException catch (e) {
       emit(PrescriptionFailure(e.message));

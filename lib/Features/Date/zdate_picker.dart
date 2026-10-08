@@ -49,12 +49,15 @@ class _GenericDatePickerState extends State<GenericDatePicker> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          widget.label,
-          style: widget.labelStyle ??
-              Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 12),
-        ),
-        const SizedBox(height: 3),
+        if(widget.label.isNotEmpty)...[
+          Text(
+            widget.label,
+            style: widget.labelStyle ??
+                Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 12),
+          ),
+          const SizedBox(height: 3),
+        ],
+
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
           height: widget.height ?? 40,

@@ -178,4 +178,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get qty => 'Qty';
+
+  @override
+  String get prescriptions => 'Prescriptions';
 }

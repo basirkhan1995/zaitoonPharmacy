@@ -61,5 +61,6 @@
   "age": "سن",
   "days": "روز",
   "instruction": "راهنمایی دوا",
-  "qty": "تعداد"
+  "qty": "تعداد",
+  "prescriptions": "نسخه ها"
 }

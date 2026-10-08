@@ -61,5 +61,6 @@
   "age": "Age",
   "days": "Days",
   "instruction": "Instruction",
-  "qty": "Qty"
+  "qty": "Qty",
+  "prescriptions": "Prescriptions"
 }

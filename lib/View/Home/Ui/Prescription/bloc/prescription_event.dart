@@ -6,9 +6,23 @@ sealed class PrescriptionEvent extends Equatable {
   @override
   List<Object?> get props => [];
 }
-
 final class PrescriptionLoadRequested extends PrescriptionEvent {
-  const PrescriptionLoadRequested();
+  final String? search;
+  final String? from;
+  final String? to;
+  final String? status;
+  final bool scopeAll;
+
+  const PrescriptionLoadRequested({
+    this.search,
+    this.from,
+    this.to,
+    this.status,
+    this.scopeAll = false,
+  });
+
+  @override
+  List<Object?> get props => [search, from, to, status, scopeAll];
 }
 
 final class PrescriptionSelectRequested extends PrescriptionEvent {

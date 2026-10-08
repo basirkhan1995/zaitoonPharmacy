@@ -433,6 +433,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Qty'**
   String get qty;
+
+  /// No description provided for @prescriptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Prescriptions'**
+  String get prescriptions;
 }
 
 class _AppLocalizationsDelegate

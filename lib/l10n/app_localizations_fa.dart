@@ -178,4 +178,7 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get qty => 'تعداد';
+
+  @override
+  String get prescriptions => 'نسخه ها';
 }
