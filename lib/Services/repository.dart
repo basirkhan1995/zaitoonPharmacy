@@ -288,12 +288,20 @@ Future<void> deleteCategory(int catId) async {
     required int medId,
     required String from,
     required String to,
+    String? batchNo,
   }) async {
-    final data = await _api.get('/api/reports/stock-card',  queryParams: {
-        'med_id': medId,
-        'from':   from,
-        'to':     to,
-      },
+    final qp = <String, dynamic>{
+      'med_id': medId,
+      'from':   from,
+      'to':     to,
+    };
+    if (batchNo != null && batchNo.trim().isNotEmpty) {
+      qp['batch_no'] = batchNo.trim();
+    }
+
+    final data = await _api.get(
+      '/api/reports/stock-card',
+      queryParams: qp,
     );
     return StockCardReport.fromJson(data as Map<String, dynamic>);
   }

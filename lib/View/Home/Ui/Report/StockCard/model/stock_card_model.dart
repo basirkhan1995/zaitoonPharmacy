@@ -2,6 +2,8 @@ class StockCardReport {
   final Map<String, dynamic> medicine;
   final String fromDate;
   final String toDate;
+  final String? batchFilter;
+  final List<BatchSummary>? batchSummary;
   final int openingBalance;
   final int totalIn;
   final int totalOut;
@@ -12,6 +14,8 @@ class StockCardReport {
     required this.medicine,
     required this.fromDate,
     required this.toDate,
+    this.batchFilter,
+    this.batchSummary,
     required this.openingBalance,
     required this.totalIn,
     required this.totalOut,
@@ -24,6 +28,12 @@ class StockCardReport {
         medicine:       json['medicine'] as Map<String, dynamic>? ?? {},
         fromDate:       json['from_date'] as String? ?? '',
         toDate:         json['to_date'] as String? ?? '',
+        batchFilter:    json['batch_filter'] as String?,
+        batchSummary:   json['batch_summary'] == null
+            ? null
+            : ((json['batch_summary'] as List)
+            .map((e) => BatchSummary.fromJson(e as Map<String, dynamic>))
+            .toList()),
         openingBalance: (json['opening_balance'] as num?)?.toInt() ?? 0,
         totalIn:        (json['total_in'] as num?)?.toInt() ?? 0,
         totalOut:       (json['total_out'] as num?)?.toInt() ?? 0,
@@ -34,6 +44,42 @@ class StockCardReport {
       );
 }
 
+class BatchSummary {
+  final int batchId;
+  final String batchNo;
+  final String expiryDate;
+  final String receivedDate;
+  final int quantityReceived;
+  final int quantityRemaining;
+  final String status;
+
+  const BatchSummary({
+    required this.batchId,
+    required this.batchNo,
+    required this.expiryDate,
+    required this.receivedDate,
+    required this.quantityReceived,
+    required this.quantityRemaining,
+    required this.status,
+  });
+
+  factory BatchSummary.fromJson(Map<String, dynamic> json) => BatchSummary(
+    batchId:           (json['batch_id'] as num).toInt(),
+    batchNo:           json['batch_no'] as String? ?? '',
+    expiryDate:        _dateOnly(json['expiry_date']),
+    receivedDate:      _dateOnly(json['received_date']),
+    quantityReceived:  (json['quantity_received'] as num?)?.toInt() ?? 0,
+    quantityRemaining: (json['quantity_remaining'] as num?)?.toInt() ?? 0,
+    status:            json['status'] as String? ?? 'ACTIVE',
+  );
+
+  static String _dateOnly(dynamic v) {
+    if (v == null) return '';
+    final s = v.toString();
+    return s.length >= 10 ? s.substring(0, 10) : s;
+  }
+}
+
 class StockCardRow {
   final int movementId;
   final String date;
@@ -41,6 +87,7 @@ class StockCardRow {
   final int inQty;
   final int outQty;
   final int balance;
+  final int? batchId;
   final String? batchNo;
   final String? expiryDate;
   final String? orgName;
@@ -56,6 +103,7 @@ class StockCardRow {
     required this.inQty,
     required this.outQty,
     required this.balance,
+    this.batchId,
     this.batchNo,
     this.expiryDate,
     this.orgName,
@@ -72,6 +120,7 @@ class StockCardRow {
     inQty:       (json['in_qty'] as num?)?.toInt() ?? 0,
     outQty:      (json['out_qty'] as num?)?.toInt() ?? 0,
     balance:     (json['balance'] as num?)?.toInt() ?? 0,
+    batchId:     json['batch_id'] == null ? null : (json['batch_id'] as num).toInt(),
     batchNo:     json['batch_no'] as String?,
     expiryDate:  json['expiry_date'] == null
         ? null

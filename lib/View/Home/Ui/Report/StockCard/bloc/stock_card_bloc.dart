@@ -22,9 +22,10 @@ class StockCardBloc extends Bloc<StockCardEvent, StockCardState> {
     emit(const StockCardLoading());
     try {
       final report = await _repo.getStockCardReport(
-        medId: event.medId,
-        from:  event.from,
-        to:    event.to,
+        medId:   event.medId,
+        from:    event.from,
+        to:      event.to,
+        batchNo: event.batchNo,
       );
       emit(StockCardLoaded(report));
     } on ApiException catch (e) {

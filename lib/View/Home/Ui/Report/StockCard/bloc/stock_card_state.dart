@@ -7,17 +7,14 @@ sealed class StockCardState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Nothing loaded yet — show the "pick a medicine" prompt.
 final class StockCardInitial extends StockCardState {
   const StockCardInitial();
 }
 
-/// Report is being fetched.
 final class StockCardLoading extends StockCardState {
   const StockCardLoading();
 }
 
-/// Report ready.
 final class StockCardLoaded extends StockCardState {
   final StockCardReport report;
   const StockCardLoaded(this.report);
@@ -26,7 +23,6 @@ final class StockCardLoaded extends StockCardState {
   List<Object?> get props => [report];
 }
 
-/// Something failed.
 final class StockCardFailure extends StockCardState {
   final String message;
   const StockCardFailure(this.message);
