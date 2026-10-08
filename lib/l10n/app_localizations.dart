@@ -439,6 +439,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Prescriptions'**
   String get prescriptions;
+
+  /// No description provided for @noPrescriptionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'No prescription for today'**
+  String get noPrescriptionToday;
 }
 
 class _AppLocalizationsDelegate

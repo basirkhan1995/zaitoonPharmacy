@@ -62,5 +62,6 @@
   "days": "Days",
   "instruction": "Instruction",
   "qty": "Qty",
-  "prescriptions": "Prescriptions"
+  "prescriptions": "Prescriptions",
+  "noPrescriptionToday": "No prescription for today"
 }

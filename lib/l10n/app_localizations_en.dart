@@ -181,4 +181,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get prescriptions => 'Prescriptions';
+
+  @override
+  String get noPrescriptionToday => 'No prescription for today';
 }

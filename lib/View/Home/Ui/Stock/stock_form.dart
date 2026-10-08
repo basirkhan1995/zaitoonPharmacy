@@ -245,7 +245,7 @@ class _StockFormDialogState extends State<StockFormDialog> {
 
           return ZFormDialog(
             title: _isEdit ? 'Edit Invoice' : 'New Stock Invoice',
-            icon: Icons.inventory_2_outlined,
+            icon: Icons.medical_information_outlined,
             width: MediaQuery.of(context).size.width * 0.65,
             padding: const EdgeInsets.all(16),
             isButtonEnabled: !saving,

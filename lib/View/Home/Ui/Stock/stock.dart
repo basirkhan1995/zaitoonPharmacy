@@ -161,17 +161,8 @@ class _StockViewState extends State<StockView> {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Row(
                 children: [
-                  Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    alignment: Alignment.center,
-                    child: Icon(Icons.inventory_2_outlined,
-                        size: 22, color: scheme.onPrimaryContainer),
-                  ),
+                  Icon(Icons.medical_information_outlined,
+                      size: 28, color: scheme.onPrimaryContainer),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(

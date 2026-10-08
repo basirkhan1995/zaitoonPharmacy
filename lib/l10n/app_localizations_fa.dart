@@ -181,4 +181,7 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get prescriptions => 'نسخه ها';
+
+  @override
+  String get noPrescriptionToday => 'نسخه یافت نشد';
 }

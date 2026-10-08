@@ -62,5 +62,6 @@
   "days": "روز",
   "instruction": "راهنمایی دوا",
   "qty": "تعداد",
-  "prescriptions": "نسخه ها"
+  "prescriptions": "نسخه ها",
+  "noPrescriptionToday": "نسخه یافت نشد"
 }
