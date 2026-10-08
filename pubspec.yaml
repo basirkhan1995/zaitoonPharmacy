@@ -1,0 +1,70 @@
+name: zpharmacy
+description: "A new Flutter project."
+
+publish_to: 'none' # Remove this line if you wish to publish to pub.dev
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.13.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+  
+    sdk: flutter
+  intl: any
+
+  cupertino_icons: ^1.0.8
+  bloc: ^9.2.1
+  equatable: ^3.0.0
+  flutter_bloc: ^9.1.1
+  dio: ^5.11.1
+  syncfusion_flutter_xlsio: ^35.1.39
+  shared_preferences: ^2.5.6
+  shamsi_date: ^1.1.1
+  file_picker: ^13.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+
+flutter:
+  generate: true
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+
+  fonts:
+    - family: NotoSans
+      fonts:
+        - asset: assets/fonts/NotoSans/NotoSans-Regular.ttf
+        - asset: assets/fonts/NotoSans/NotoSans-Bold.ttf
+        - asset: assets/fonts/NotoSans/NotoSans-Medium.ttf
+        - asset: assets/fonts/NotoSans/NotoSans-Light.ttf
+        - asset: assets/fonts/NotoSans/NotoSans-Italic.ttf
+
+    - family: OpenSans
+      fonts:
+        - asset: assets/fonts/OpenSans/OpenSans-Regular.ttf
+        - asset: assets/fonts/OpenSans/OpenSans-Bold.ttf
+        - asset: assets/fonts/OpenSans/OpenSans-Medium.ttf
+        - asset: assets/fonts/OpenSans/OpenSans-Light.ttf
+
+    - family: NotoNaskh
+      fonts:
+        - asset: assets/fonts/NotoNaskh/NotoNaskhArabic-Regular.ttf
+        - asset: assets/fonts/NotoNaskh/NotoNaskhArabic-Bold.ttf
+        - asset: assets/fonts/NotoNaskh/NotoNaskhArabic-SemiBold.ttf
+        - asset: assets/fonts/NotoNaskh/NotoNaskhArabic-Medium.ttf
+
+    - family: Amiri
+      fonts:
+        - asset: assets/fonts/Amiri/Amiri-Regular.ttf
+        - asset: assets/fonts/Amiri/Amiri-Bold.ttf
+        - asset: assets/fonts/Amiri/Amiri-BoldItalic.ttf
+        - asset: assets/fonts/Amiri/Amiri-Italic.ttf
