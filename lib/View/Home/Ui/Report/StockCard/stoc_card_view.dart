@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
-import 'package:zpharmacy/Features/Widgets/zbutton.dart';
-
 import '../../Medicine/bloc/medicine_bloc.dart';
 import '../../Medicine/medcine_field.dart';
 import '../../Medicine/model/medicine_model.dart';
@@ -127,11 +125,11 @@ class _StockCardViewState extends State<StockCardView> {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 // Medicine
                 Expanded(
-                  flex: 5,
+                  flex: 7,
                   child: MedicineSearchField(
                     initial: _medicine,
                     label: 'Medicine *',
