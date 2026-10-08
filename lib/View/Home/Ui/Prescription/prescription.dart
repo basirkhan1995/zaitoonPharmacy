@@ -20,9 +20,6 @@ class _PrescriptionViewState extends State<PrescriptionView> {
     context.read<PrescriptionBloc>().add(const PrescriptionLoadRequested());
   }
 
-  // -----------------------------------------------------------------
-  // Add
-  // -----------------------------------------------------------------
   Future<void> _openAdd() async {
     final bloc = context.read<PrescriptionBloc>();
     await showDialog<bool>(
@@ -36,15 +33,9 @@ class _PrescriptionViewState extends State<PrescriptionView> {
     bloc.add(const PrescriptionClearSelection());
   }
 
-  // -----------------------------------------------------------------
-  // View — MUST dispatch Select first so items arrive from the API
-  // -----------------------------------------------------------------
   Future<void> _openDetail(Prescription p) async {
     final bloc = context.read<PrescriptionBloc>();
-
-    // Ask the bloc to fetch the full detail (items + dispensed batches)
     bloc.add(PrescriptionSelectRequested(p.prescriptionId));
-
     await showDialog<bool>(
       context: context,
       barrierDismissible: true,
@@ -53,19 +44,12 @@ class _PrescriptionViewState extends State<PrescriptionView> {
         child: PrescriptionDetails(prescription: p),
       ),
     );
-
     bloc.add(const PrescriptionClearSelection());
   }
 
-  // -----------------------------------------------------------------
-  // Edit
-  // -----------------------------------------------------------------
   Future<void> _openEdit(Prescription p) async {
     final bloc = context.read<PrescriptionBloc>();
-
-    // Ensure items are loaded so the read-only medicine list has data
     bloc.add(PrescriptionSelectRequested(p.prescriptionId));
-
     await showDialog<bool>(
       context: context,
       barrierDismissible: false,
@@ -74,13 +58,9 @@ class _PrescriptionViewState extends State<PrescriptionView> {
         child: AddEditPrescriptionForm(existing: p),
       ),
     );
-
     bloc.add(const PrescriptionClearSelection());
   }
 
-  // -----------------------------------------------------------------
-  // Cancel confirmation
-  // -----------------------------------------------------------------
   Future<void> _confirmCancel(Prescription p) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -94,8 +74,8 @@ class _PrescriptionViewState extends State<PrescriptionView> {
           ),
           title: Text('Cancel ${p.registerNo}?'),
           content: const Text(
-            'The prescription will be marked as CANCELLED. '
-                'Stock already dispensed is NOT returned.',
+            'The prescription will be marked as CANCELLED and all '
+                'dispensed stock will be returned to its batches.',
           ),
           actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
@@ -223,7 +203,7 @@ class _PrescriptionViewState extends State<PrescriptionView> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
                 itemCount: items.length,
                 itemBuilder: (_, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
+                  padding: const EdgeInsets.only(bottom: 8),
                   child: _PrescriptionCard(
                     prescription: items[i],
                     onTap: () => _openDetail(items[i]),
@@ -248,7 +228,7 @@ class _PrescriptionViewState extends State<PrescriptionView> {
 }
 
 // =====================================================================
-// Card
+// Compact card
 // =====================================================================
 class _PrescriptionCard extends StatelessWidget {
   final Prescription prescription;
@@ -268,162 +248,168 @@ class _PrescriptionCard extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final cancelled = prescription.isCancelled;
 
+    // Compact meta line: "R-0001 · M, 32 · 3 items · 07 Oct"
+    final meta = <String>[
+      prescription.registerNo,
+      '${prescription.gender[0]}, ${prescription.age}',
+      '${prescription.itemCount} item${prescription.itemCount == 1 ? '' : 's'}',
+      prescription.prescriptionDate,
+    ].join('  ·  ');
+
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+          padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
           child: Row(
             children: [
-              // Icon
+              // ---- Small initial avatar ----
               Container(
-                width: 44,
-                height: 44,
+                width: 36,
+                height: 36,
                 decoration: BoxDecoration(
                   color: cancelled
                       ? scheme.errorContainer
                       : scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
-                child: Icon(
-                  cancelled
-                      ? Icons.cancel_outlined
-                      : Icons.receipt_long_outlined,
-                  color: cancelled
-                      ? scheme.onErrorContainer
-                      : scheme.onPrimaryContainer,
-                  size: 22,
+                child: Text(
+                  prescription.patientName.isNotEmpty
+                      ? prescription.patientName[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: cancelled
+                        ? scheme.onErrorContainer
+                        : scheme.onPrimaryContainer,
+                  ),
                 ),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 12),
 
-              // Info
+              // ---- Name + meta ----
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       prescription.patientName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 3),
-                    Text(
-                      '${prescription.registerNo}  •  '
-                          '${prescription.gender}, ${prescription.age}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        fontSize: 12.5,
-                        color: scheme.onSurfaceVariant,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        decoration: cancelled
+                            ? TextDecoration.lineThrough
+                            : null,
+                        decorationColor: scheme.onSurfaceVariant,
+                        color: cancelled
+                            ? scheme.onSurfaceVariant
+                            : scheme.onSurface,
                       ),
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 2),
                     Text(
-                      '${prescription.prescriptionDate}  •  '
-                          '${prescription.itemCount} item(s)',
+                      meta,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11.5,
                         color: scheme.onSurfaceVariant
-                            .withValues(alpha: 0.75),
+                            .withValues(alpha: 0.85),
                       ),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 8),
 
-              // Status badge
+              // ---- Status dot ----
               Container(
-                padding:
-                const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                width: 8,
+                height: 8,
                 decoration: BoxDecoration(
-                  color: cancelled
-                      ? scheme.errorContainer
-                      : scheme.secondaryContainer,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  cancelled ? 'Cancelled' : 'Dispensed',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: cancelled
-                        ? scheme.onErrorContainer
-                        : scheme.onSecondaryContainer,
-                  ),
+                  shape: BoxShape.circle,
+                  color: cancelled ? scheme.error : scheme.secondary,
                 ),
               ),
+              const SizedBox(width: 4),
 
-              // Popup
-              PopupMenuButton<_MenuAction>(
-                icon: Icon(Icons.more_vert,
-                    color: scheme.onSurfaceVariant),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                elevation: 2,
-                position: PopupMenuPosition.under,
-                onSelected: (a) {
-                  switch (a) {
-                    case _MenuAction.view:
-                      onTap();
-                      break;
-                    case _MenuAction.edit:
-                      onEdit();
-                      break;
-                    case _MenuAction.cancel:
-                      onCancel?.call();
-                      break;
-                  }
-                },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
-                    value: _MenuAction.view,
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility_outlined, size: 18),
-                        SizedBox(width: 10),
-                        Text('View'),
-                      ],
-                    ),
+              // ---- Popup ----
+              SizedBox(
+                width: 32,
+                height: 32,
+                child: PopupMenuButton<_MenuAction>(
+                  tooltip: 'More',
+                  padding: EdgeInsets.zero,
+                  icon: Icon(
+                    Icons.more_vert,
+                    size: 18,
+                    color: scheme.onSurfaceVariant,
                   ),
-                  if (!cancelled)
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  elevation: 2,
+                  position: PopupMenuPosition.under,
+                  onSelected: (a) {
+                    switch (a) {
+                      case _MenuAction.view:
+                        onTap();
+                        break;
+                      case _MenuAction.edit:
+                        onEdit();
+                        break;
+                      case _MenuAction.cancel:
+                        onCancel?.call();
+                        break;
+                    }
+                  },
+                  itemBuilder: (_) => [
                     const PopupMenuItem(
-                      value: _MenuAction.edit,
+                      value: _MenuAction.view,
                       child: Row(
                         children: [
-                          Icon(Icons.edit_outlined, size: 18),
+                          Icon(Icons.visibility_outlined, size: 18),
                           SizedBox(width: 10),
-                          Text('Edit'),
+                          Text('View'),
                         ],
                       ),
                     ),
-                  if (onCancel != null)
-                    PopupMenuItem(
-                      value: _MenuAction.cancel,
-                      child: Row(
-                        children: [
-                          Icon(Icons.cancel_outlined,
-                              size: 18, color: scheme.error),
-                          const SizedBox(width: 10),
-                          Text(
-                            'Cancel Rx',
-                            style: TextStyle(color: scheme.error),
-                          ),
-                        ],
+                    if (!cancelled)
+                      const PopupMenuItem(
+                        value: _MenuAction.edit,
+                        child: Row(
+                          children: [
+                            Icon(Icons.edit_outlined, size: 18),
+                            SizedBox(width: 10),
+                            Text('Edit'),
+                          ],
+                        ),
                       ),
-                    ),
-                ],
+                    if (onCancel != null)
+                      PopupMenuItem(
+                        value: _MenuAction.cancel,
+                        child: Row(
+                          children: [
+                            Icon(Icons.cancel_outlined,
+                                size: 18, color: scheme.error),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Cancel Rx',
+                              style: TextStyle(color: scheme.error),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ],
           ),
@@ -434,4 +420,3 @@ class _PrescriptionCard extends StatelessWidget {
 }
 
 enum _MenuAction { view, edit, cancel }
-
