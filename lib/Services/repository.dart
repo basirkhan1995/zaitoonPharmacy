@@ -3,6 +3,7 @@ import 'package:zpharmacy/View/Auth/auth_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
+import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
 import '../View/Home/Ui/Settings/Ui/Category/model/med_category_model.dart';
 import '../View/Home/Ui/Stock/model/stock_model.dart';
 import 'api_services.dart';
@@ -281,6 +282,20 @@ Future<void> deleteCategory(int catId) async {
       quantityRemaining:(e['quantity_remaining'] as num).toInt(),
     ))
         .toList();
+  }
+
+  Future<StockCardReport> getStockCardReport({
+    required int medId,
+    required String from,
+    required String to,
+  }) async {
+    final data = await _api.get('/api/reports/stock-card',  queryParams: {
+        'med_id': medId,
+        'from':   from,
+        'to':     to,
+      },
+    );
+    return StockCardReport.fromJson(data as Map<String, dynamic>);
   }
 
 }

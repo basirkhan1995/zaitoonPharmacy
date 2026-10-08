@@ -687,11 +687,11 @@ class _MedicineSearchFieldState extends State<MedicineSearchField> {
                 fillColor: scheme.surfaceContainerLow,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.5), width: 1.2),
+                  borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.3), width: 1),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4),
-                  borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.5), width: 1.2),
+                  borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.3), width: 1),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4),
