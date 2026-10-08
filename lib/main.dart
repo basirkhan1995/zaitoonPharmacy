@@ -15,6 +15,7 @@ import 'Services/api_services.dart';
 import 'Themes/Bloc/themes_bloc.dart';
 import 'Themes/Ui/theme.dart';
 import 'View/Home/Ui/Medicine/bloc/medicine_bloc.dart';
+import 'View/Home/Ui/Report/MedicineReport/bloc/medicine_report_bloc.dart';
 import 'l10n/Bloc/localizations_bloc.dart';
 
 void main() async{
@@ -40,8 +41,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => PrescriptionBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => StockBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => BatchBloc(Repositories(ApiServices()))),
-
         BlocProvider(create: (context) => StockCardBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => MedicineReportBloc(Repositories(ApiServices()))),
       ],
       child: BlocBuilder<LocalizationBloc, Locale>(
         builder: (context, locale) {

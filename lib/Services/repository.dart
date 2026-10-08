@@ -3,6 +3,7 @@ import 'package:zpharmacy/View/Auth/auth_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
+import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
 import '../View/Home/Ui/Settings/Ui/Category/model/med_category_model.dart';
 import '../View/Home/Ui/Stock/model/stock_model.dart';
@@ -304,6 +305,26 @@ Future<void> deleteCategory(int catId) async {
       queryParams: qp,
     );
     return StockCardReport.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<MedicineReport> getMedicineReport({
+    required String from,
+    required String to,
+    String? search,
+  }) async {
+    final qp = <String, dynamic>{
+      'from': from,
+      'to':   to,
+    };
+    if (search != null && search.trim().isNotEmpty) {
+      qp['search'] = search.trim();
+    }
+
+    final data = await _api.get(
+      '/api/reports/medicines',
+      queryParams: qp,
+    );
+    return MedicineReport.fromJson(data as Map<String, dynamic>);
   }
 
 }
