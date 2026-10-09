@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:zpharmacy/Features/Date/shamsi_converter.dart';
 
 import '../../../../Features/Widgets/z_dialog.dart';
 import 'bloc/prescription_bloc.dart';
@@ -35,7 +36,7 @@ class PrescriptionDetails extends StatelessWidget {
                 // Patient block
                 _kv(scheme, 'Patient',  '${full.patientName} · ${full.gender} · ${full.age}'),
                 _kv(scheme, 'Register', full.registerNo),
-                _kv(scheme, 'Date',     full.prescriptionDate),
+                _kv(scheme, 'Date',     "${full.prescriptionDate.toFormattedDate()} | ${full.prescriptionDate.shamsiDateFormatted}"),
                 if (full.doctorName != null) _kv(scheme, 'Doctor',    full.doctorName!),
                 if (full.diagnosis  != null) _kv(scheme, 'Diagnosis', full.diagnosis!),
                 if (full.address    != null) _kv(scheme, 'Address',   full.address!),
@@ -58,8 +59,8 @@ class PrescriptionDetails extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 8),
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: scheme.surfaceContainer,
-                      borderRadius: BorderRadius.circular(8),
+                      color: scheme.surfaceContainer.withValues(alpha: .8),
+                      borderRadius: BorderRadius.circular(5),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -103,7 +104,7 @@ class PrescriptionDetails extends StatelessWidget {
                                 ),
                                 child: Text(
                                   '${b.batchNo} · ${b.quantity}'
-                                      '${b.expiryDate != null ? " · exp ${b.expiryDate}" : ""}',
+                                      '${b.expiryDate != null ? " · EXP ${b.expiryDate.toFormattedDate()}" : ""}',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: scheme.onSecondaryContainer,

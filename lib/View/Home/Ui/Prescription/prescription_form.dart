@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/ztextfield.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
+
 import '../../../../Features/Widgets/z_dialog.dart';
 import '../../../../Features/zdropdown.dart';
 import '../Medicine/bloc/medicine_bloc.dart';
@@ -24,7 +25,8 @@ class AddEditPrescriptionForm extends StatefulWidget {
 class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
   final _formKey = GlobalKey<FormState>();
   bool _itemsPrefilled = false;
-  // Header
+
+  // ---------------- Header controllers ----------------
   final _registerNo  = TextEditingController();
   final _patientName = TextEditingController();
   final _age         = TextEditingController();
@@ -34,28 +36,25 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
   final _note        = TextEditingController();
   String _gender = 'Male';
 
-  final _regFocus       = FocusNode(debugLabel: 'regNo');
-  final _nameFocus      = FocusNode(debugLabel: 'patientName');
-  final _ageFocus       = FocusNode(debugLabel: 'age');
-  final _addressFocus   = FocusNode(debugLabel: 'address');
-  final _doctorFocus    = FocusNode(debugLabel: 'doctor');
-  final _diagnosisFocus = FocusNode(debugLabel: 'diagnosis');
-  final _noteFocus      = FocusNode(debugLabel: 'note');
+  // Focus nodes that participate in the auto-chain.
+  final _regFocus  = FocusNode(debugLabel: 'regNo');
+  final _nameFocus = FocusNode(debugLabel: 'patientName');
 
   // Items
   final List<PrescriptionItemDraft> _drafts = [];
 
+  // -----------------------------------------------------------------
+  // Item prefill (edit mode)
+  // -----------------------------------------------------------------
   void _prefillItems(Prescription p) {
     if (_itemsPrefilled) return;
-    if (p.items.isEmpty) return;      // wait for the bloc's selected state
+    if (p.items.isEmpty) return;
 
-    // Clear anything currently there
     for (final d in _drafts) {
       d.dispose();
     }
     _drafts.clear();
 
-    // Rebuild drafts from the loaded items
     for (final it in p.items) {
       final draft = PrescriptionItemDraft();
       draft.medicine = Medicine(
@@ -67,9 +66,6 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
         catName: '',
       );
       draft.qty.text         = '${it.quantity}';
-      draft.days.text        = it.durationDays == null
-          ? ''
-          : '${it.durationDays}';
       draft.instruction.text = it.dosageInstruction ?? '';
       _drafts.add(draft);
     }
@@ -90,7 +86,6 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
 
     final e = widget.existing;
     if (e != null) {
-      // ----- Prefill header right away -----
       _registerNo.text  = e.registerNo;
       _patientName.text = e.patientName;
       _age.text         = '${e.age}';
@@ -100,7 +95,6 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
       _note.text        = e.note ?? '';
       _gender           = e.gender;
 
-      // ----- Try to prefill items now (may be empty if not yet loaded) -----
       _prefillItems(e);
     } else {
       _addItemRow(focusAfterBuild: false);
@@ -108,6 +102,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
 
     context.read<MedicineBloc>().add(const MedicineLoadRequested());
 
+    // Autofocus the register field.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _regFocus.requestFocus();
     });
@@ -124,11 +119,6 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
     _note.dispose();
     _regFocus.dispose();
     _nameFocus.dispose();
-    _ageFocus.dispose();
-    _addressFocus.dispose();
-    _doctorFocus.dispose();
-    _diagnosisFocus.dispose();
-    _noteFocus.dispose();
     for (final d in _drafts) {
       d.dispose();
     }
@@ -136,7 +126,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
   }
 
   // -----------------------------------------------------------------
-  // Rows
+  // Item rows
   // -----------------------------------------------------------------
   void _addItemRow({bool focusAfterBuild = true}) {
     final draft = PrescriptionItemDraft();
@@ -161,6 +151,12 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
     });
   }
 
+  void _focusFirstMedicine() {
+    if (_drafts.isNotEmpty) {
+      _drafts.first.medicineFocus.requestFocus();
+    }
+  }
+
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
@@ -183,16 +179,14 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
         _toast('Row ${i + 1}: enter a valid quantity');
         return;
       }
-      final days = d.days.text.trim().isEmpty
-          ? null
-          : int.tryParse(d.days.text.trim());
+
       items.add(PrescriptionItemRequest(
         medId:             d.medicine!.medId,
         quantity:          qty,
         dosageInstruction: d.instruction.text.trim().isEmpty
             ? null
             : d.instruction.text.trim(),
-        durationDays:      days,
+        durationDays:      null,
       ));
     }
 
@@ -221,16 +215,17 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
     }
   }
 
+  // -----------------------------------------------------------------
+  // Build
+  // -----------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
     return BlocListener<PrescriptionBloc, PrescriptionState>(
-      // ----- Close dialog when the save/create succeeds -----
       listenWhen: (prev, curr) => curr is PrescriptionActionSuccess,
       listener: (context, state) {
         Navigator.of(context).pop(true);
       },
       child: BlocListener<PrescriptionBloc, PrescriptionState>(
-        // ----- Prefill items when the API returns the full prescription -----
         listenWhen: (prev, curr) =>
         _isEdit &&
             !_itemsPrefilled &&
@@ -276,6 +271,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                         const SizedBox(height: 8),
 
                         Row(children: [
+                          // ----- Register No (required + autofocus) -----
                           Expanded(
                             child: ZTextFieldEntitled(
                               title: AppLocalizations.of(context)!.regNo,
@@ -283,6 +279,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                               controller: _registerNo,
                               focusNode: _regFocus,
                               inputAction: TextInputAction.next,
+                              // Enter → jump to Patient Name
                               onSubmit: (_) => _nameFocus.requestFocus(),
                               validator: (v) =>
                               (v == null || v.trim().isEmpty)
@@ -291,6 +288,8 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                             ),
                           ),
                           const SizedBox(width: 12),
+
+                          // ----- Patient Name (required) -----
                           Expanded(
                             child: ZTextFieldEntitled(
                               title: AppLocalizations.of(context)!.patientName,
@@ -298,7 +297,8 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                               controller: _patientName,
                               focusNode: _nameFocus,
                               inputAction: TextInputAction.next,
-                              onSubmit: (_) => _ageFocus.requestFocus(),
+                              // Enter → jump to first medicine
+                              onSubmit: (_) => _focusFirstMedicine(),
                               validator: (v) =>
                               (v == null || v.trim().isEmpty)
                                   ? 'Required'
@@ -306,20 +306,37 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                             ),
                           ),
                           const SizedBox(width: 12),
+
+                          // ----- Age (optional) -----
                           Expanded(
                             child: ZTextFieldEntitled(
                               title: AppLocalizations.of(context)!.age,
-                              isRequired: true,
                               controller: _age,
-                              focusNode: _ageFocus,
                               inputAction: TextInputAction.next,
-                              onSubmit: (_) => _addressFocus.requestFocus(),
                               validator: (v) {
-                                final n = int.tryParse(v?.trim() ?? '');
-                                return (n == null || n < 0 || n > 150)
-                                    ? '0–150'
-                                    : null;
+                                if (v == null || v.trim().isEmpty) return null;
+                                final n = int.tryParse(v.trim());
+                                if (n == null || n < 0 || n > 150) {
+                                  return '0–150';
+                                }
+                                return null;
                               },
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+
+                          // ----- Gender -----
+                          Expanded(
+                            child: ZDropdown<String>(
+                              title: 'Gender',
+                              items: const ['Male', 'Female'],
+                              itemLabel: (v) => v,
+                              selectedItem: _gender,
+                              initialValue: 'Select gender',
+                              radius: 4,
+                              height: 40,
+                              onItemSelected: (v) =>
+                                  setState(() => _gender = v),
                             ),
                           ),
                         ]),
@@ -333,66 +350,29 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                               child: ZTextFieldEntitled(
                                 title: 'Address',
                                 controller: _address,
-                                focusNode: _addressFocus,
                                 inputAction: TextInputAction.next,
-                                onSubmit: (_) => _doctorFocus.requestFocus(),
                               ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
-                              child: ZDropdown<String>(
-                                title: 'Gender',
-                                items: const ['Male', 'Female'],
-                                itemLabel: (v) => v,
-                                selectedItem: _gender,
-                                initialValue: 'Select gender',
-                                radius: 4,
-                                height: 40,
-                                onItemSelected: (v) =>
-                                    setState(() => _gender = v),
+                              flex: 2,
+                              child: ZTextFieldEntitled(
+                                title: 'Doctor',
+                                controller: _doctorName,
+                                inputAction: TextInputAction.next,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 3,
+                              child: ZTextFieldEntitled(
+                                title: 'Diagnosis',
+                                controller: _diagnosis,
+                                inputAction: TextInputAction.done,
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 12),
-
-                        Row(children: [
-                          Expanded(
-                            flex: 2,
-                            child: ZTextFieldEntitled(
-                              title: 'Doctor',
-                              controller: _doctorName,
-                              focusNode: _doctorFocus,
-                              inputAction: TextInputAction.next,
-                              onSubmit: (_) => _diagnosisFocus.requestFocus(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 2,
-                            child: ZTextFieldEntitled(
-                              title: 'Diagnosis',
-                              controller: _diagnosis,
-                              focusNode: _diagnosisFocus,
-                              onSubmit: (_) => _noteFocus.requestFocus(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            flex: 3,
-                            child: ZTextFieldEntitled(
-                              title: 'Note',
-                              controller: _note,
-                              focusNode: _noteFocus,
-                              inputAction: TextInputAction.done,
-                              onSubmit: (_) {
-                                if (_drafts.isNotEmpty) {
-                                  _drafts.first.medicineFocus.requestFocus();
-                                }
-                              },
-                            ),
-                          ),
-                        ]),
 
                         const SizedBox(height: 20),
 
@@ -431,6 +411,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
       ),
     );
   }
+
   Widget _sectionTitle(BuildContext context, String text) {
     final scheme = Theme.of(context).colorScheme;
     return Text(
@@ -446,26 +427,22 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
 }
 
 // =====================================================================
-// Draft — PUBLIC so PrescriptionItemRow can reference it in its API
+// Draft
 // =====================================================================
 class PrescriptionItemDraft {
   final qty         = TextEditingController();
   final instruction = TextEditingController();
-  final days        = TextEditingController();
   Medicine? medicine;
 
   final medicineFocus    = FocusNode(debugLabel: 'row-medicine');
   final qtyFocus         = FocusNode(debugLabel: 'row-qty');
-  final daysFocus        = FocusNode(debugLabel: 'row-days');
   final instructionFocus = FocusNode(debugLabel: 'row-instruction');
 
   void dispose() {
     qty.dispose();
     instruction.dispose();
-    days.dispose();
     medicineFocus.dispose();
     qtyFocus.dispose();
-    daysFocus.dispose();
     instructionFocus.dispose();
   }
 }
@@ -478,8 +455,6 @@ class PrescriptionItemRow extends StatefulWidget {
   final int index;
   final VoidCallback? onRemove;
 
-  /// Called when the user presses Enter in the last field (Instruction).
-  /// The parent responds by adding a new row and focusing its medicine field.
   final VoidCallback? onSubmitLastField;
 
   const PrescriptionItemRow({
@@ -501,7 +476,7 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
     final draft = widget.draft;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
         borderRadius: BorderRadius.circular(8),
@@ -523,14 +498,13 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
           ),
           const SizedBox(width: 8),
 
-          // ----- Medicine picker -----
           Expanded(
-            flex: 2,
+            flex: 3,
             child: MedicineSearchField(
               initial: draft.medicine,
               focusNode: draft.medicineFocus,
               nextFocusNode: draft.qtyFocus,
-              hintText: 'Search medicine',
+              hintText: 'Search medicine *',
               onSelected: (m) {
                 setState(() => draft.medicine = m);
               },
@@ -538,7 +512,6 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
           ),
           const SizedBox(width: 8),
 
-          // ----- Qty -----
           SizedBox(
             width: 100,
             child: TextFormField(
@@ -546,7 +519,7 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
               focusNode: draft.qtyFocus,
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => draft.daysFocus.requestFocus(),
+              onFieldSubmitted: (_) => draft.instructionFocus.requestFocus(),
               decoration: _fieldDecoration(
                   scheme, AppLocalizations.of(context)!.qty),
               validator: (v) {
@@ -557,23 +530,8 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
           ),
           const SizedBox(width: 8),
 
-          // ----- Days -----
-          SizedBox(
-            width: 90,
-            child: TextFormField(
-              controller: draft.days,
-              focusNode: draft.daysFocus,
-              keyboardType: TextInputType.number,
-              textInputAction: TextInputAction.next,
-              onFieldSubmitted: (_) => draft.instructionFocus.requestFocus(),
-              decoration: _fieldDecoration(
-                  scheme, AppLocalizations.of(context)!.days),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // ----- Instruction (last field) -----
           Expanded(
+            flex: 2,
             child: TextFormField(
               controller: draft.instruction,
               focusNode: draft.instructionFocus,
