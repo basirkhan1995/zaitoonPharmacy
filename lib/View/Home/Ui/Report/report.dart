@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:zpharmacy/Features/Widgets/znavigator.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/MedicineReport/medicine_report_view.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/stoc_card_view.dart';
+import 'TallySheet/tally_sheet.dart';
 
 class ReportView extends StatelessWidget {
   const ReportView({super.key});
@@ -87,6 +88,7 @@ class ReportView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
+
             _ReportCard(
               icon: Icons.list_alt_outlined,
               title: 'Medicines Report',
@@ -98,6 +100,21 @@ class ReportView extends StatelessWidget {
               onTap: () => ZNavigator.goto(
                 context: context,
                 const MedicineReportView(),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _ReportCard(
+              icon: Icons.receipt_long_outlined,
+              title: 'Tally Sheet',
+              description:
+              'Per-medicine out tally: every dispense, damage, expiry '
+                  'and donation out — with a running total per medicine.',
+              accent: scheme.error,
+              bg: scheme.errorContainer,
+              onTap: () => ZNavigator.goto(
+                context: context,
+                const TallySheetView(),
               ),
             ),
           ],

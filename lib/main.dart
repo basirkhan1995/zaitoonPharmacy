@@ -6,6 +6,7 @@ import 'package:zpharmacy/View/Home/Ui/Medicine/batch_bloc/batch_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Organization/bloc/organization_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/bloc/prescription_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/bloc/stock_card_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Report/TallySheet/bloc/tally_sheet_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Stock/bloc/stock_bloc.dart';
 import 'package:zpharmacy/View/Home/bloc/menu_bloc.dart';
@@ -43,6 +44,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => BatchBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => StockCardBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => MedicineReportBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => TallySheetBloc(Repositories(ApiServices()))),
       ],
       child: BlocBuilder<LocalizationBloc, Locale>(
         builder: (context, locale) {

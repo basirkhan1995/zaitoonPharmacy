@@ -7,6 +7,7 @@ import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
 import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
+import '../View/Home/Ui/Report/TallySheet/model/tally_sheet_model.dart';
 import '../View/Home/Ui/Settings/Ui/Category/model/med_category_model.dart';
 import '../View/Home/Ui/Stock/model/stock_model.dart';
 import 'api_services.dart';
@@ -346,5 +347,28 @@ Future<void> deleteCategory(int catId) async {
       data: formData,
     );
   }
+  Future<List<TallySheetRow>> getTallySheetReport({
+    required String from,
+    required String to,
+    int? catId,
+  }) async {
+    final qp = <String, dynamic>{
+      'from': from,
+      'to':   to,
+    };
+    if (catId != null && catId > 0) {
+      qp['catId'] = catId;
+    }
+
+    final data = await _api.get(
+      '/api/reports/tally-sheet',
+      queryParams: qp,
+    );
+
+    return (data as List)
+        .map((e) => TallySheetRow.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
 
 }
