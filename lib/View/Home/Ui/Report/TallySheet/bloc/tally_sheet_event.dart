@@ -21,3 +21,18 @@ final class TallySheetLoadRequested extends TallySheetEvent {
   @override
   List<Object?> get props => [from, to, catId];
 }
+
+final class TallySheetExportRequested extends TallySheetEvent {
+  final String from;
+  final String to;
+  final int? catId;
+
+  const TallySheetExportRequested({
+    required this.from,
+    required this.to,
+    this.catId,
+  });
+
+  @override
+  List<Object?> get props => [from, to, catId];
+}

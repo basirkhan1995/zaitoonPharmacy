@@ -30,3 +30,20 @@ final class StockCardLoadRequested extends StockCardEvent {
 final class StockCardClear extends StockCardEvent {
   const StockCardClear();
 }
+
+final class StockCardExportRequested extends StockCardEvent {
+  final int medId;
+  final String from;
+  final String to;
+  final String? batchNo;
+
+  const StockCardExportRequested({
+    required this.medId,
+    required this.from,
+    required this.to,
+    this.batchNo,
+  });
+
+  @override
+  List<Object?> get props => [medId, from, to, batchNo];
+}

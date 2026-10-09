@@ -1,7 +1,12 @@
+import 'dart:typed_data';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
+import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import '../../../../../Features/Widgets/shimmer.dart';
+import '../../../../../Features/Widgets/toast.dart';
 import '../../Medicine/bloc/medicine_bloc.dart';
 import '../../Medicine/medcine_field.dart';
 import '../../Medicine/model/medicine_model.dart';
@@ -25,6 +30,8 @@ class _StockCardViewState extends State<StockCardView> {
   late String _pickerEnd;
   String _from = '';
   String _to   = '';
+
+  bool _isExporting = false;
 
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-'
@@ -102,163 +109,222 @@ class _StockCardViewState extends State<StockCardView> {
     _reload();
   }
 
+  // ── Export
+  void _onExport() {
+    if (_medicine == null || _from.isEmpty || _to.isEmpty) return;
+    context.read<StockCardBloc>().add(StockCardExportRequested(
+      medId:   _medicine!.medId,
+      from:    _from,
+      to:      _to,
+      batchNo: _batchCtrl.text.trim().isEmpty
+          ? null
+          : _batchCtrl.text.trim(),
+    ));
+  }
+
+  Future<void> _saveExportedFile(StockCardExported s) async {
+    final result = await FilePicker.saveFile(
+      dialogTitle: 'Save stock card',
+      fileName: s.fileName,
+      bytes: Uint8List.fromList(s.bytes),
+    );
+    if (result == null || !mounted) return;
+
+    final path = result.toFilePath();
+    ToastManager.show(context: context,title: "Export Success", message: 'Saved to $path', type: ToastType.info);
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Stock Card'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Refresh',
-            onPressed: _reload,
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          // =====================================================
-          // FILTER BAR
-          // =====================================================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                // Medicine
-                Expanded(
-                  flex: 7,
-                  child: MedicineSearchField(
-                    initial: _medicine,
-                    label: 'Medicine *',
-                    hintText: 'Search medicine',
-                    onSelected: _onMedicineChanged,
-                  ),
-                ),
-                const SizedBox(width: 12),
+    return BlocListener<StockCardBloc, StockCardState>(
+      listener: (context, state) {
+        // Sync `_isExporting` with bloc state
+        if (state is! StockCardExporting && _isExporting) {
+          setState(() => _isExporting = false);
+        }
+        if (state is StockCardExporting) {
+          setState(() => _isExporting = true);
+        }
 
-                // Date range
-                Expanded(
-                  flex: 3,
-                  child: ZRangeDatePicker(
-                    height: 43,
-                    label: 'Date range',
-                    initialStartDate: DateTime.tryParse(_pickerStart),
-                    initialEndDate: DateTime.tryParse(_pickerEnd),
-                    startValue: _pickerStart,
-                    endValue: _pickerEnd,
-                    onStartDateChanged: (s) =>
-                        setState(() => _pickerStart = s),
-                    onEndDateChanged: (e) {
-                      setState(() => _pickerEnd = e);
-                      if (_pickerStart.isNotEmpty && _pickerEnd.isNotEmpty) {
-                        _onDateChanged(_pickerStart, _pickerEnd);
-                      }
-                    },
-                    minYear: 2020,
-                    maxYear: 2100,
+        if (state is StockCardExported) {
+          _saveExportedFile(state);
+        }
+        if (state is StockCardExportFailed) {
+          ToastManager.show(context: context,title: "Export Failed", message: 'Failed to export Excel', type: ToastType.error);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Stock Card'),
+          actionsPadding: const EdgeInsets.all(10),
+          actions: [
+            ZOutlineButton(
+              icon: Icons.refresh,
+              label: const Text('Refresh'),
+              onPressed: _isExporting ? null : _reload,
+            ),
+            const SizedBox(width: 8),
+            ZOutlineButton(
+              onPressed: (_medicine == null || _isExporting)
+                  ? null
+                  : _onExport,
+              isActive: true,
+              icon: Icons.file_download_outlined,
+              label: Text(_isExporting ? 'Exporting…' : 'Export Excel'),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // =====================================================
+            // FILTER BAR
+            // =====================================================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Medicine
+                  Expanded(
+                    flex: 7,
+                    child: MedicineSearchField(
+                      initial: _medicine,
+                      label: 'Medicine *',
+                      hintText: 'Search medicine',
+                      onSelected: _onMedicineChanged,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
+                  const SizedBox(width: 12),
 
-                // Batch filter
-                Expanded(
-                  flex: 2,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Batch (optional)',
-                        style:
-                        TextStyle(fontSize: 12, color: scheme.outline),
-                      ),
-                      const SizedBox(height: 4),
-                      TextField(
-                        controller: _batchCtrl,
-                        onSubmitted: (_) => _reload(),
-                        onChanged: (_) => setState(() {}),
-                        decoration: InputDecoration(
-                          hintText: 'e.g. AMX-01',
-                          isDense: true,
-                          contentPadding: const EdgeInsets.symmetric(
-                              vertical: 12, horizontal: 12),
-                          prefixIcon: const Icon(Icons.qr_code_2_outlined,
-                              size: 18),
-                          suffixIcon: _batchCtrl.text.isEmpty
-                              ? null
-                              : IconButton(
-                            icon: const Icon(Icons.close, size: 16),
-                            tooltip: 'Clear',
-                            onPressed: _clearBatch,
-                          ),
-                          filled: true,
-                          fillColor: scheme.surfaceContainerLow,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                                color:
-                                scheme.outline.withValues(alpha: 0.4)),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                                color:
-                                scheme.outline.withValues(alpha: 0.4)),
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(4),
-                            borderSide: BorderSide(
-                                color: scheme.primary, width: 1.2),
+                  // Date range
+                  Expanded(
+                    flex: 3,
+                    child: ZRangeDatePicker(
+                      height: 43,
+                      label: 'Date range',
+                      initialStartDate: DateTime.tryParse(_pickerStart),
+                      initialEndDate: DateTime.tryParse(_pickerEnd),
+                      startValue: _pickerStart,
+                      endValue: _pickerEnd,
+                      onStartDateChanged: (s) =>
+                          setState(() => _pickerStart = s),
+                      onEndDateChanged: (e) {
+                        setState(() => _pickerEnd = e);
+                        if (_pickerStart.isNotEmpty && _pickerEnd.isNotEmpty) {
+                          _onDateChanged(_pickerStart, _pickerEnd);
+                        }
+                      },
+                      minYear: 2020,
+                      maxYear: 2100,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Batch filter
+                  Expanded(
+                    flex: 2,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Batch (optional)',
+                          style: TextStyle(fontSize: 12, color: scheme.outline),
+                        ),
+                        const SizedBox(height: 4),
+                        TextField(
+                          controller: _batchCtrl,
+                          onSubmitted: (_) => _reload(),
+                          onChanged: (_) => setState(() {}),
+                          decoration: InputDecoration(
+                            hintText: 'e.g. AMX-01',
+                            isDense: true,
+                            contentPadding: const EdgeInsets.symmetric(
+                                vertical: 12, horizontal: 12),
+                            prefixIcon: const Icon(Icons.qr_code_2_outlined,
+                                size: 18),
+                            suffixIcon: _batchCtrl.text.isEmpty
+                                ? null
+                                : IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              tooltip: 'Clear',
+                              onPressed: _clearBatch,
+                            ),
+                            filled: true,
+                            fillColor: scheme.surfaceContainerLow,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: BorderSide(
+                                  color: scheme.outline.withValues(alpha: 0.4)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: BorderSide(
+                                  color: scheme.outline.withValues(alpha: 0.4)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(4),
+                              borderSide: BorderSide(
+                                  color: scheme.primary, width: 1.2),
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          // =====================================================
-          // REPORT
-          // =====================================================
-          Expanded(
-            child: BlocBuilder<StockCardBloc, StockCardState>(
-              builder: (context, state) {
-                if (state is StockCardInitial) {
-                  return const _EmptyPrompt();
-                }
-                if (state is StockCardLoading) {
-                  return UniversalShimmer.dataList(
-                    itemCount: 15,
-                    numberOfColumns: 5,
-                  );
-                }
-                if (state is StockCardFailure) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        state.message,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: scheme.error),
-                      ),
+                      ],
                     ),
-                  );
-                }
-                if (state is StockCardLoaded) {
-                  return _ReportBody(report: state.report);
-                }
-                return const SizedBox.shrink();
-              },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
+
+            const SizedBox(height: 4),
+
+            // =====================================================
+            // REPORT
+            // =====================================================
+            Expanded(
+              child: BlocBuilder<StockCardBloc, StockCardState>(
+                builder: (context, state) {
+                  if (state is StockCardInitial) {
+                    return const _EmptyPrompt();
+                  }
+                  if (state is StockCardLoading) {
+                    return UniversalShimmer.dataList(
+                      itemCount: 15,
+                      numberOfColumns: 5,
+                    );
+                  }
+                  if (state is StockCardFailure) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          state.message,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: scheme.error),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // All export states carry the report — keep showing the table
+                  final report = switch (state) {
+                    StockCardLoaded s         => s.report,
+                    StockCardExporting s      => s.report,
+                    StockCardExported s       => s.report,
+                    StockCardExportFailed s   => s.report,
+                    _                         => null,
+                  };
+
+                  if (report != null) {
+                    return _ReportBody(report: report);
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -410,14 +476,10 @@ class _ReportBody extends StatelessWidget {
         children: [
           Text('$label  ',
               style: TextStyle(
-                  fontSize: 10,
-                  color: fg,
-                  fontWeight: FontWeight.w600)),
+                  fontSize: 10, color: fg, fontWeight: FontWeight.w600)),
           Text(value,
               style: TextStyle(
-                  fontSize: 12,
-                  color: fg,
-                  fontWeight: FontWeight.w700)),
+                  fontSize: 12, color: fg, fontWeight: FontWeight.w700)),
         ],
       ),
     );
@@ -442,8 +504,7 @@ class _BatchSummaryStrip extends StatelessWidget {
         decoration: BoxDecoration(
           color: scheme.tertiaryContainer.withValues(alpha: 0.35),
           borderRadius: BorderRadius.circular(6),
-          border:
-          Border.all(color: scheme.tertiary.withValues(alpha: 0.35)),
+          border: Border.all(color: scheme.tertiary.withValues(alpha: 0.35)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -503,8 +564,7 @@ class _BatchSummaryStrip extends StatelessWidget {
                     child: Text(
                       '${b.quantityRemaining} / ${b.quantityReceived}',
                       style: const TextStyle(
-                          fontSize: 11.5,
-                          fontWeight: FontWeight.w600),
+                          fontSize: 11.5, fontWeight: FontWeight.w600),
                     ),
                   ),
                   Container(
@@ -589,7 +649,7 @@ class _TableHeader extends StatelessWidget {
 }
 
 // =====================================================================
-// Row — batch + expiry stacked in one column
+// Row
 // =====================================================================
 class _RowTile extends StatelessWidget {
   final StockCardRow row;
@@ -619,8 +679,7 @@ class _RowTile extends StatelessWidget {
           // Date
           SizedBox(
             width: 80,
-            child:
-            Text(row.date, style: const TextStyle(fontSize: 11.5)),
+            child: Text(row.date, style: const TextStyle(fontSize: 11.5)),
           ),
 
           // Type
@@ -659,8 +718,7 @@ class _RowTile extends StatelessWidget {
                   ),
                   overflow: TextOverflow.ellipsis,
                 ),
-                if (row.expiryDate != null &&
-                    row.expiryDate!.isNotEmpty)
+                if (row.expiryDate != null && row.expiryDate!.isNotEmpty)
                   Row(
                     children: [
                       Icon(
@@ -695,14 +753,12 @@ class _RowTile extends StatelessWidget {
                 if (row.reference != null)
                   Text(row.reference!,
                       style: TextStyle(
-                          fontSize: 10.5,
-                          color: scheme.onSurfaceVariant),
+                          fontSize: 10.5, color: scheme.onSurfaceVariant),
                       overflow: TextOverflow.ellipsis),
                 if (row.patientName != null)
                   Text(row.patientName!,
                       style: TextStyle(
-                          fontSize: 10.5,
-                          color: scheme.onSurfaceVariant),
+                          fontSize: 10.5, color: scheme.onSurfaceVariant),
                       overflow: TextOverflow.ellipsis),
               ],
             ),
@@ -771,14 +827,12 @@ class _RowTile extends StatelessWidget {
         return _TypeStyle('Adjustment', Icons.tune_outlined,
             scheme.onSurfaceVariant);
       case 'EXPIRED':
-        return _TypeStyle(
-            'Expired', Icons.schedule_outlined, scheme.error);
+        return _TypeStyle('Expired', Icons.schedule_outlined, scheme.error);
       case 'DAMAGE':
         return _TypeStyle('Damage',
             Icons.report_gmailerrorred_outlined, scheme.error);
       case 'RETURN':
-        return _TypeStyle(
-            'Return', Icons.undo_outlined, scheme.tertiary);
+        return _TypeStyle('Return', Icons.undo_outlined, scheme.tertiary);
       default:
         return _TypeStyle(
             type, Icons.circle_outlined, scheme.onSurfaceVariant);
@@ -810,8 +864,7 @@ class _EmptyPrompt extends StatelessWidget {
           children: [
             Icon(Icons.assessment_outlined,
                 size: 56,
-                color:
-                scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+                color: scheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 14),
             Text(
               'Pick a medicine to see its stock card',

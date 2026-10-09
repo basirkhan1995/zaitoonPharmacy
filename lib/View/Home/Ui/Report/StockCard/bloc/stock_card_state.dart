@@ -30,3 +30,36 @@ final class StockCardFailure extends StockCardState {
   @override
   List<Object?> get props => [message];
 }
+
+final class StockCardExporting extends StockCardState {
+  final StockCardReport report;
+  const StockCardExporting(this.report);
+
+  @override
+  List<Object?> get props => [report];
+}
+
+final class StockCardExported extends StockCardState {
+  final StockCardReport report;
+  final List<int> bytes;
+  final String fileName;
+
+  const StockCardExported({
+    required this.report,
+    required this.bytes,
+    required this.fileName,
+  });
+
+  @override
+  List<Object?> get props => [report, bytes, fileName];
+}
+
+final class StockCardExportFailed extends StockCardState {
+  final StockCardReport report;
+  final String message;
+
+  const StockCardExportFailed(this.report, this.message);
+
+  @override
+  List<Object?> get props => [report, message];
+}

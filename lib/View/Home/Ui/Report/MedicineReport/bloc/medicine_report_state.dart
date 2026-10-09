@@ -30,3 +30,36 @@ final class MedicineReportFailure extends MedicineReportState {
   @override
   List<Object?> get props => [message];
 }
+
+final class MedicineReportExporting extends MedicineReportState {
+  final MedicineReport report;
+  const MedicineReportExporting(this.report);
+
+  @override
+  List<Object?> get props => [report];
+}
+
+final class MedicineReportExported extends MedicineReportState {
+  final MedicineReport report;
+  final List<int> bytes;
+  final String fileName;
+
+  const MedicineReportExported({
+    required this.report,
+    required this.bytes,
+    required this.fileName,
+  });
+
+  @override
+  List<Object?> get props => [report, bytes, fileName];
+}
+
+final class MedicineReportExportFailed extends MedicineReportState {
+  final MedicineReport report;
+  final String message;
+
+  const MedicineReportExportFailed(this.report, this.message);
+
+  @override
+  List<Object?> get props => [report, message];
+}

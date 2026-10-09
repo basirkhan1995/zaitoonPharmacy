@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:zpharmacy/Features/Widgets/znavigator.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/MedicineReport/medicine_report_view.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/stoc_card_view.dart';
+import 'AntibioticReport/antibiotic_report.dart';
 import 'TallySheet/tally_sheet.dart';
 
 class ReportView extends StatelessWidget {
@@ -115,6 +116,21 @@ class ReportView extends StatelessWidget {
               onTap: () => ZNavigator.goto(
                 context: context,
                 const TallySheetView(),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            _ReportCard(
+              icon: Icons.assignment_outlined,
+              title: 'Antibiotic Form',
+              description:
+              'Daily antibiotic percentage and polypharmacy analysis '
+                  'form with a printable Excel layout for HF Name / Code.',
+              accent: scheme.secondary,
+              bg: scheme.secondaryContainer,
+              onTap: () => ZNavigator.goto(
+                context: context,
+                const AntibioticReportView(),
               ),
             ),
           ],

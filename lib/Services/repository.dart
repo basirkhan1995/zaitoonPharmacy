@@ -5,6 +5,7 @@ import 'package:zpharmacy/View/Auth/auth_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
+import '../View/Home/Ui/Report/AntibioticReport/model/antibiotic_model.dart';
 import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
 import '../View/Home/Ui/Report/TallySheet/model/tally_sheet_model.dart';
@@ -310,6 +311,27 @@ Future<void> deleteCategory(int catId) async {
     return StockCardReport.fromJson(data as Map<String, dynamic>);
   }
 
+  Future<List<int>> exportStockCardExcel({
+    required int medId,
+    required String from,
+    required String to,
+    String? batchNo,
+  }) async {
+    final qp = <String, dynamic>{
+      'med_id': medId,
+      'from':   from,
+      'to':     to,
+    };
+    if (batchNo != null && batchNo.trim().isNotEmpty) {
+      qp['batch_no'] = batchNo.trim();
+    }
+
+    return _api.downloadFile(
+      '/api/reports/stock-card/export',
+      queryParams: qp,
+    );
+  }
+
   Future<MedicineReport> getMedicineReport({
     required String from,
     required String to,
@@ -368,6 +390,63 @@ Future<void> deleteCategory(int catId) async {
     return (data as List)
         .map((e) => TallySheetRow.fromJson(e as Map<String, dynamic>))
         .toList();
+  }
+
+  Future<List<int>> exportTallySheetExcel({
+    required String from,
+    required String to,
+    int? catId,
+  }) async {
+    final qp = <String, dynamic>{
+      'from': from,
+      'to':   to,
+    };
+    if (catId != null && catId > 0) qp['catId'] = catId;
+
+    return _api.downloadFile(
+      '/api/reports/tally-sheet/export',
+      queryParams: qp,
+    );
+  }
+
+  Future<List<int>> exportMedicineReportExcel({
+    required String from,
+    required String to,
+    String? search,
+  }) async {
+    final qp = <String, dynamic>{
+      'from': from,
+      'to':   to,
+    };
+    if (search != null && search.trim().isNotEmpty) {
+      qp['search'] = search.trim();
+    }
+
+    return _api.downloadFile(
+      '/api/reports/medicines/export',
+      queryParams: qp,
+    );
+  }
+
+  Future<AntibioticReport> getAntibioticReport({
+    required String from,
+    required String to,
+  }) async {
+    final data = await _api.get(
+      '/api/reports/antibiotic-form',
+      queryParams: {'from': from, 'to': to},
+    );
+    return AntibioticReport.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<List<int>> exportAntibioticReportExcel({
+    required String from,
+    required String to,
+  }) async {
+    return _api.downloadFile(
+      '/api/reports/antibiotic-form/export',
+      queryParams: {'from': from, 'to': to},
+    );
   }
 
 

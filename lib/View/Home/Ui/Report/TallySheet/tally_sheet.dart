@@ -1,10 +1,13 @@
+
+import 'dart:typed_data';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/shamsi_converter.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
+import 'package:zpharmacy/Features/Widgets/toast.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
-
 import '../../../../../Features/Widgets/shimmer.dart';
 import '../../Settings/Ui/Category/category_drop.dart';
 import '../../Settings/Ui/Category/model/med_category_model.dart';
@@ -19,12 +22,14 @@ class TallySheetView extends StatefulWidget {
 }
 
 class _TallySheetViewState extends State<TallySheetView> {
-  Category? _category;   // null = All categories
+  Category? _category;
 
   late String _pickerStart;
   late String _pickerEnd;
   String _from = '';
   String _to   = '';
+
+  bool _isExporting = false;
 
   String _fmt(DateTime d) =>
       '${d.year}-${d.month.toString().padLeft(2, '0')}-'
@@ -34,7 +39,6 @@ class _TallySheetViewState extends State<TallySheetView> {
   void initState() {
     super.initState();
 
-    // Default: last 30 days
     final now   = DateTime.now();
     final start = now.subtract(const Duration(days: 30));
 
@@ -51,11 +55,10 @@ class _TallySheetViewState extends State<TallySheetView> {
 
   void _reload() {
     if (_from.isEmpty || _to.isEmpty) return;
-
     context.read<TallySheetBloc>().add(TallySheetLoadRequested(
       from:  _from,
       to:    _to,
-      catId: _category?.catId,   // null → all
+      catId: _category?.catId,
     ));
   }
 
@@ -110,24 +113,41 @@ class _TallySheetViewState extends State<TallySheetView> {
     _reload();
   }
 
-  /// Which quick-range chip is currently active (or null if custom).
   String? _activeQuickRange() {
-    final now = DateTime.now();
-    final today = _fmt(DateTime(now.year, now.month, now.day));
+    final now    = DateTime.now();
+    final today  = _fmt(DateTime(now.year, now.month, now.day));
     final last30 = _fmt(now.subtract(const Duration(days: 30)));
     final nowStr = _fmt(now);
 
     if (_from == last30 && _to == nowStr) return 'last30';
     if (_from == today && _to == nowStr)   return 'today';
     if (_from == '2020-01-01' && _to == nowStr) return 'all';
-    return null; // custom range
+    return null;
   }
 
+  // ── Export: dispatch the event; the bloc handles the rest
   void _onExport() {
-    // TODO: wire export logic later
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Export coming soon')),
+    if (_from.isEmpty || _to.isEmpty) return;
+    context.read<TallySheetBloc>().add(TallySheetExportRequested(
+      from:  _from,
+      to:    _to,
+      catId: _category?.catId,
+    ));
+  }
+
+  Future<void> _saveExportedFile(TallySheetExported s) async {
+    final result = await FilePicker.saveFile(
+      dialogTitle: 'Save tally sheet',
+      fileName: s.fileName,
+      bytes: Uint8List.fromList(s.bytes),   // ← pass bytes here
     );
+
+    if (result == null || !mounted) return;
+
+    // Some versions return String, some return Uri — handle both
+    final savedPath = result.toFilePath();
+
+    ToastManager.show(context: context,title: "Export Success", message: 'Saved to $savedPath', type: ToastType.info);
   }
 
   @override
@@ -136,188 +156,203 @@ class _TallySheetViewState extends State<TallySheetView> {
     final tr = AppLocalizations.of(context)!;
     final activeQuick = _activeQuickRange();
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Tally Sheet'),
-        actionsPadding: EdgeInsets.all(8),
-        actions: [
-          ZOutlineButton(
-            icon: Icons.refresh,
-            toolTip: 'Refresh',
-            label: Text("Refresh"),
-            onPressed: _reload,
-          ),
-          const SizedBox(width: 8),
-          ZOutlineButton(
-            onPressed: _onExport,
-            isActive: true,
-            backgroundHover: Colors.green,
-            icon: Icons.file_download_outlined,
-            label: const Text('Export Excel'),
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-    // =====================================================
-    // FILTER BAR — chips at the start, pickers on the right
-    // =====================================================
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // ── Quick chips + active category chip (START)
-                Expanded(
-                  flex: 6,
-                  child: Wrap(
-                    spacing: 6,
-                    runSpacing: 6,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: [
-                      _QuickChip(
-                        label: 'All time',
-                        icon: Icons.all_inclusive,
-                        selected: activeQuick == 'all',
-                        onTap: () => _setQuickRange('all'),
-                        scheme: scheme,
-                      ),
-                      _QuickChip(
-                        label: 'Last 30 days',
-                        icon: Icons.calendar_view_month_outlined,
-                        selected: activeQuick == 'last30',
-                        onTap: () => _setQuickRange('last30'),
-                        scheme: scheme,
-                      ),
-                      _QuickChip(
-                        label: 'Today',
-                        icon: Icons.today_outlined,
-                        selected: activeQuick == 'today',
-                        onTap: () => _setQuickRange('today'),
-                        scheme: scheme,
-                      ),
+    return BlocListener<TallySheetBloc, TallySheetState>(
+      listener: (context, state) {
+        // Reset the button flag whenever we leave "exporting"
+        if (state is! TallySheetExporting && _isExporting) {
+          setState(() => _isExporting = false);
+        }
 
-                      // Active category chip — only when a category is selected
-                      if (_category != null)
-                        InputChip(
-                          avatar: Icon(
-                            Icons.category_outlined,
-                            size: 16,
-                            color: scheme.onPrimaryContainer,
-                          ),
-                          label: Text(
-                            _category!.catName,
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.onPrimaryContainer,
+        if (state is TallySheetExporting) {
+          setState(() => _isExporting = true);
+        }
+
+        if (state is TallySheetExported) {
+          _saveExportedFile(state);
+        }
+
+        if (state is TallySheetExportFailed) {
+          ToastManager.show(context: context,title: "Export Failed", message: 'Failed to export Excel', type: ToastType.error);
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Tally Sheet'),
+          titleSpacing: 0,
+          actionsPadding: EdgeInsets.all(10),
+          actions: [
+            ZOutlineButton(
+              icon: Icons.refresh,
+              label: Text("Refresh"),
+              toolTip: 'Refresh',
+              onPressed: _reload,
+            ),
+            const SizedBox(width: 8),
+            ZOutlineButton(
+              isActive: true,
+              onPressed: _isExporting ? null : _onExport,
+              icon: Icons.file_download_outlined,
+              label: Text(_isExporting ? 'Exporting…' : 'Export Excel'),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // ── FILTER BAR (same as before)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Expanded(
+                    flex: 6,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _QuickChip(
+                          label: 'All time',
+                          icon: Icons.all_inclusive,
+                          selected: activeQuick == 'all',
+                          onTap: () => _setQuickRange('all'),
+                          scheme: scheme,
+                        ),
+                        _QuickChip(
+                          label: 'Last 30 days',
+                          icon: Icons.calendar_view_month_outlined,
+                          selected: activeQuick == 'last30',
+                          onTap: () => _setQuickRange('last30'),
+                          scheme: scheme,
+                        ),
+                        _QuickChip(
+                          label: 'Today',
+                          icon: Icons.today_outlined,
+                          selected: activeQuick == 'today',
+                          onTap: () => _setQuickRange('today'),
+                          scheme: scheme,
+                        ),
+                        if (_category != null)
+                          InputChip(
+                            avatar: Icon(Icons.category_outlined,
+                                size: 16,
+                                color: scheme.onPrimaryContainer),
+                            label: Text(
+                              _category!.catName,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w600,
+                                color: scheme.onPrimaryContainer,
+                              ),
                             ),
-                          ),
-                          backgroundColor: scheme.primaryContainer,
-                          deleteIcon: Icon(
-                            Icons.close,
-                            size: 16,
-                            color: scheme.onPrimaryContainer,
-                          ),
-                          deleteIconColor: scheme.onPrimaryContainer,
-                          onDeleted: _clearCategory,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20),
+                            backgroundColor: scheme.primaryContainer,
+                            deleteIcon: Icon(Icons.close,
+                                size: 16,
+                                color: scheme.onPrimaryContainer),
+                            deleteIconColor: scheme.onPrimaryContainer,
+                            onDeleted: _clearCategory,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: scheme.primary.withValues(alpha: 0.3),
+                              ),
+                            ),
                             side: BorderSide(
                               color: scheme.primary.withValues(alpha: 0.3),
                             ),
+                            materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                            visualDensity: VisualDensity.compact,
                           ),
-                          side: BorderSide(
-                            color: scheme.primary.withValues(alpha: 0.3),
-                          ),
-                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          visualDensity: VisualDensity.compact,
-                        ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // ── Category filter
-                Expanded(
-                  flex: 5,
-                  child: MedicineCategoryDropView(
-                    title: tr.category,
-                    hint: 'All categories',
-                    selected: _category,
-                    enabled: true,
-                    onSelected: _onCategoryChanged,
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // ── Date range picker
-                Expanded(
-                  flex: 4,
-                  child: ZRangeDatePicker(
-                    height: 43,
-                    label: 'Date range',
-                    initialStartDate: DateTime.tryParse(_pickerStart),
-                    initialEndDate: DateTime.tryParse(_pickerEnd),
-                    startValue: _pickerStart,
-                    endValue: _pickerEnd,
-                    onStartDateChanged: (s) => setState(() => _pickerStart = s),
-                    onEndDateChanged: (e) {
-                      setState(() => _pickerEnd = e);
-                      if (_pickerStart.isNotEmpty && _pickerEnd.isNotEmpty) {
-                        _onDateChanged(_pickerStart, _pickerEnd);
-                      }
-                    },
-                    minYear: 2020,
-                    maxYear: 2100,
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 4),
-
-          // =====================================================
-          // REPORT
-          // =====================================================
-          Expanded(
-            child: BlocBuilder<TallySheetBloc, TallySheetState>(
-              builder: (context, state) {
-                if (state is TallySheetInitial) {
-                  return const _EmptyPrompt();
-                }
-                if (state is TallySheetLoading) {
-                  return UniversalShimmer.dataList(
-                    itemCount: 15,
-                    numberOfColumns: 5,
-                  );
-                }
-                if (state is TallySheetFailure) {
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Text(
-                        state.message,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: scheme.error),
-                      ),
+                      ],
                     ),
-                  );
-                }
-                if (state is TallySheetLoaded) {
-                  if (state.rows.isEmpty) {
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 4,
+                    child: MedicineCategoryDropView(
+                      title: tr.category,
+                      hint: 'All categories',
+                      selected: _category,
+                      enabled: !_isExporting,
+                      onSelected: _onCategoryChanged,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 4,
+                    child: ZRangeDatePicker(
+                      height: 43,
+                      label: 'Date range',
+                      initialStartDate: DateTime.tryParse(_pickerStart),
+                      initialEndDate: DateTime.tryParse(_pickerEnd),
+                      startValue: _pickerStart,
+                      endValue: _pickerEnd,
+                      onStartDateChanged: (s) =>
+                          setState(() => _pickerStart = s),
+                      onEndDateChanged: (e) {
+                        setState(() => _pickerEnd = e);
+                        if (_pickerStart.isNotEmpty &&
+                            _pickerEnd.isNotEmpty) {
+                          _onDateChanged(_pickerStart, _pickerEnd);
+                        }
+                      },
+                      minYear: 2020,
+                      maxYear: 2100,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 4),
+
+            // ── REPORT
+            Expanded(
+              child: BlocBuilder<TallySheetBloc, TallySheetState>(
+                builder: (context, state) {
+                  if (state is TallySheetInitial) {
+                    return const _EmptyPrompt();
+                  }
+                  if (state is TallySheetLoading) {
+                    return UniversalShimmer.dataList(
+                      itemCount: 15,
+                      numberOfColumns: 5,
+                    );
+                  }
+                  if (state is TallySheetFailure) {
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          state.message,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: scheme.error),
+                        ),
+                      ),
+                    );
+                  }
+
+                  // All three carry the rows
+                  final rows = switch (state) {
+                    TallySheetLoaded s        => s.rows,
+                    TallySheetExporting s     => s.rows,
+                    TallySheetExported s      => s.rows,
+                    TallySheetExportFailed s  => s.rows,
+                    _                         => const <TallySheetRow>[],
+                  };
+
+                  if (rows.isEmpty) {
                     return const _EmptyPrompt(
                       message: 'No out movements in this range',
                     );
                   }
-                  return _ReportBody(rows: state.rows);
-                }
-                return const SizedBox.shrink();
-              },
+                  return _ReportBody(rows: rows);
+                },
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

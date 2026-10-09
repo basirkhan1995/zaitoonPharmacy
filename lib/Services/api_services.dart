@@ -276,23 +276,18 @@ class ApiServices {
     throw Exception('Unexpected body type: ${body.runtimeType}');
   }
 
-  Future<Response> downloadFile(
+  Future<List<int>> downloadFile(
       String endpoint, {
-        required String savePath,
+        Map<String, dynamic>? queryParams,
         CancelToken? cancelToken,
-        ProgressCallback? onReceiveProgress,
       }) async {
-    await _ensureInit();
-    try {
-      return await _dio.download(
-        endpoint,
-        savePath,
-        cancelToken: cancelToken,
-        onReceiveProgress: onReceiveProgress,
-      );
-    } on DioException catch (e) {
-      throw ApiException(_describe(e), statusCode: e.response?.statusCode);
-    }
+    final response = await _dio.get<List<int>>(
+      endpoint,
+      queryParameters: queryParams,
+      cancelToken: cancelToken,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return response.data ?? <int>[];
   }
 
   Future<void> _ensureInit() async {

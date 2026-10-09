@@ -1,26 +1,22 @@
-import 'dart:async';
 import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import '../../../../../Features/Widgets/shimmer.dart';
-import '../../../../../Features/Widgets/toast.dart';
-import 'bloc/medicine_report_bloc.dart';
-import 'model/medicine_report_model.dart';
+import 'bloc/antibiotic_report_bloc.dart';
+import 'model/antibiotic_model.dart';
 
-class MedicineReportView extends StatefulWidget {
-  const MedicineReportView({super.key});
+class AntibioticReportView extends StatefulWidget {
+  const AntibioticReportView({super.key});
 
   @override
-  State<MedicineReportView> createState() => _MedicineReportViewState();
+  State<AntibioticReportView> createState() => _AntibioticReportViewState();
 }
 
-class _MedicineReportViewState extends State<MedicineReportView> {
-  final _searchCtrl = TextEditingController();
-  Timer? _debounce;
-
+class _AntibioticReportViewState extends State<AntibioticReportView> {
   late String _pickerStart;
   late String _pickerEnd;
   String _from = '';
@@ -35,8 +31,9 @@ class _MedicineReportViewState extends State<MedicineReportView> {
   @override
   void initState() {
     super.initState();
+
     final now   = DateTime.now();
-    final start = now.subtract(const Duration(days: 30));
+    final start = DateTime(now.year, now.month, 1);
     _pickerStart = _fmt(start);
     _pickerEnd   = _fmt(now);
     _from        = _pickerStart;
@@ -48,27 +45,11 @@ class _MedicineReportViewState extends State<MedicineReportView> {
     });
   }
 
-  @override
-  void dispose() {
-    _debounce?.cancel();
-    _searchCtrl.dispose();
-    super.dispose();
-  }
-
   void _reload() {
-    context.read<MedicineReportBloc>().add(MedicineReportLoadRequested(
-      from:   _from,
-      to:     _to,
-      search: _searchCtrl.text.trim().isEmpty
-          ? null
-          : _searchCtrl.text.trim(),
-    ));
-  }
-
-  void _onSearchChanged(String _) {
-    setState(() {});
-    _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 350), _reload);
+    if (_from.isEmpty || _to.isEmpty) return;
+    context.read<AntibioticReportBloc>().add(
+      AntibioticReportLoadRequested(from: _from, to: _to),
+    );
   }
 
   void _onDateChanged(String start, String end) {
@@ -81,51 +62,57 @@ class _MedicineReportViewState extends State<MedicineReportView> {
     _reload();
   }
 
-  // ── Export
   void _onExport() {
     if (_from.isEmpty || _to.isEmpty) return;
-    context.read<MedicineReportBloc>().add(MedicineReportExportRequested(
-      from:   _from,
-      to:     _to,
-      search: _searchCtrl.text.trim().isEmpty
-          ? null
-          : _searchCtrl.text.trim(),
-    ));
+    context.read<AntibioticReportBloc>().add(
+      AntibioticReportExportRequested(from: _from, to: _to),
+    );
   }
 
-  Future<void> _saveExportedFile(MedicineReportExported s) async {
+  Future<void> _saveExportedFile(AntibioticReportExported s) async {
     final result = await FilePicker.saveFile(
-      dialogTitle: 'Save medicines report',
+      dialogTitle: 'Save antibiotic form',
       fileName: s.fileName,
       bytes: Uint8List.fromList(s.bytes),
     );
     if (result == null || !mounted) return;
 
     final path = result.toFilePath();
-    ToastManager.show(context: context,title: "Export Success", message: 'Saved to $path', type: ToastType.info);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Saved to $path'),
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return BlocListener<MedicineReportBloc, MedicineReportState>(
+
+    return BlocListener<AntibioticReportBloc, AntibioticReportState>(
       listener: (context, state) {
-        if (state is! MedicineReportExporting && _isExporting) {
+        if (state is! AntibioticReportExporting && _isExporting) {
           setState(() => _isExporting = false);
         }
-        if (state is MedicineReportExporting) {
+        if (state is AntibioticReportExporting) {
           setState(() => _isExporting = true);
         }
-        if (state is MedicineReportExported) {
+        if (state is AntibioticReportExported) {
           _saveExportedFile(state);
         }
-        if (state is MedicineReportExportFailed) {
-          ToastManager.show(context: context,title: "Export Failed", message: 'Failed to export Excel', type: ToastType.error);
+        if (state is AntibioticReportExportFailed) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Export failed: ${state.message}'),
+              backgroundColor: scheme.error,
+            ),
+          );
         }
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('Medicines Report'),
+          title: const Text('Antibiotic Form'),
           actionsPadding: const EdgeInsets.all(10),
           actions: [
             ZOutlineButton(
@@ -144,64 +131,14 @@ class _MedicineReportViewState extends State<MedicineReportView> {
         ),
         body: Column(
           children: [
-            // =====================================================
-            // FILTER BAR
-            // =====================================================
+            // ── FILTER BAR
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
+                  const Expanded(flex: 6, child: SizedBox()),
                   Expanded(
-                    flex: 6,
-                    child: TextField(
-                      controller: _searchCtrl,
-                      onChanged: _onSearchChanged,
-                      textInputAction: TextInputAction.search,
-                      onSubmitted: (_) => _reload(),
-                      decoration: InputDecoration(
-                        hintText: 'Search by name, brand, category, dosage',
-                        prefixIcon: const Icon(Icons.search, size: 20),
-                        suffixIcon: _searchCtrl.text.isEmpty
-                            ? null
-                            : IconButton(
-                          icon: const Icon(Icons.close, size: 18),
-                          onPressed: () {
-                            _searchCtrl.clear();
-                            setState(() {});
-                            _reload();
-                          },
-                        ),
-                        isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(
-                            vertical: 10, horizontal: 12),
-                        filled: true,
-                        fillColor: scheme.surfaceContainerLow,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: scheme.outline.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: scheme.outline.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(4),
-                          borderSide: BorderSide(
-                            color: scheme.primary,
-                            width: 1.2,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 3,
+                    flex: 4,
                     child: ZRangeDatePicker(
                       height: 43,
                       label: 'Date range',
@@ -227,22 +164,20 @@ class _MedicineReportViewState extends State<MedicineReportView> {
 
             const SizedBox(height: 4),
 
-            // =====================================================
-            // REPORT
-            // =====================================================
+            // ── REPORT
             Expanded(
-              child: BlocBuilder<MedicineReportBloc, MedicineReportState>(
+              child: BlocBuilder<AntibioticReportBloc, AntibioticReportState>(
                 builder: (context, state) {
-                  if (state is MedicineReportInitial) {
+                  if (state is AntibioticReportInitial) {
                     return const Center(child: Text('Loading…'));
                   }
-                  if (state is MedicineReportLoading) {
+                  if (state is AntibioticReportLoading) {
                     return UniversalShimmer.dataList(
                       itemCount: 15,
                       numberOfColumns: 5,
                     );
                   }
-                  if (state is MedicineReportFailure) {
+                  if (state is AntibioticReportFailure) {
                     return Center(
                       child: Padding(
                         padding: const EdgeInsets.all(24),
@@ -255,13 +190,12 @@ class _MedicineReportViewState extends State<MedicineReportView> {
                     );
                   }
 
-                  // All export states carry the report — keep showing the table
                   final report = switch (state) {
-                    MedicineReportLoaded s         => s.report,
-                    MedicineReportExporting s      => s.report,
-                    MedicineReportExported s       => s.report,
-                    MedicineReportExportFailed s   => s.report,
-                    _                              => null,
+                    AntibioticReportLoaded s          => s.report,
+                    AntibioticReportExporting s       => s.report,
+                    AntibioticReportExported s        => s.report,
+                    AntibioticReportExportFailed s    => s.report,
+                    _                                 => null,
                   };
 
                   if (report != null) {
@@ -282,16 +216,17 @@ class _MedicineReportViewState extends State<MedicineReportView> {
 // Report body
 // =====================================================================
 class _ReportBody extends StatelessWidget {
-  final MedicineReport report;
+  final AntibioticReport report;
   const _ReportBody({required this.report});
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final t = report.totals;
 
     return Column(
       children: [
-        // -------- Summary header --------
+        // ── Summary header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
           child: Container(
@@ -310,7 +245,7 @@ class _ReportBody extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Text(
-                        'Medicines Report',
+                        'Antibiotic & Polypharmacy Analysis',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w700,
@@ -325,50 +260,30 @@ class _ReportBody extends StatelessWidget {
                               .withValues(alpha: 0.75),
                         ),
                       ),
-                      if (report.search != null) ...[
-                        const SizedBox(height: 3),
-                        Row(children: [
-                          Icon(Icons.search,
-                              size: 12, color: scheme.primary),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Filter: "${report.search}"',
-                            style: TextStyle(
-                              fontSize: 11.5,
-                              fontWeight: FontWeight.w600,
-                              color: scheme.primary,
-                            ),
-                          ),
-                        ]),
-                      ],
                     ],
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _pill(
-                      scheme,
-                      'Medicines',
-                      '${report.medicineCount}',
-                      scheme.surfaceContainerHighest,
-                      scheme.onSurfaceVariant,
-                    ),
+                    _pill(scheme, 'Total Meds', '${t.totalMedicines}',
+                        scheme.surfaceContainerHighest,
+                        scheme.onSurfaceVariant),
                     const SizedBox(height: 4),
                     _pill(
                       scheme,
-                      'In ${report.grandTotalIn}',
-                      'Out ${report.grandTotalOut}',
-                      scheme.secondaryContainer,
-                      scheme.onSecondaryContainer,
-                    ),
-                    const SizedBox(height: 4),
-                    _pill(
-                      scheme,
-                      'Balance',
-                      '${report.grandBalance}',
+                      'Antibiotics',
+                      '${t.antibioticCount}  (${t.antibioticPercent.toStringAsFixed(1)}%)',
                       scheme.primaryContainer,
                       scheme.onPrimaryContainer,
+                    ),
+                    const SizedBox(height: 4),
+                    _pill(
+                      scheme,
+                      'Polypharmacy',
+                      '${t.polypharmacyCount}  (${t.polypharmacyPercent.toStringAsFixed(1)}%)',
+                      scheme.errorContainer,
+                      scheme.onErrorContainer,
                     ),
                   ],
                 ),
@@ -377,18 +292,17 @@ class _ReportBody extends StatelessWidget {
           ),
         ),
 
-        // -------- Table header --------
         _TableHeader(scheme: scheme),
 
-        // -------- Rows --------
         Expanded(
-          child: report.medicines.isEmpty
-              ? const Center(child: Text('No medicines match the filter'))
+          child: report.rows.isEmpty
+              ? const Center(child: Text('No prescriptions in this range'))
               : ListView.builder(
             padding: const EdgeInsets.only(bottom: 24),
-            itemCount: report.medicines.length,
+            itemCount: report.rows.length,
             itemBuilder: (_, i) => _RowTile(
-              row: report.medicines[i],
+              index: i + 1,
+              row: report.rows[i],
               scheme: scheme,
               isOdd: i.isOdd,
             ),
@@ -442,12 +356,13 @@ class _TableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _h('Medicine', null, flex: 4),
-          _h('Category', 130),
-          _h('Organizations', null, flex: 3),
-          _h('In', 60, align: TextAlign.right),
-          _h('Out', 60, align: TextAlign.right),
-          _h('Balance', 80, align: TextAlign.right),
+          _h('#', 40, align: TextAlign.center),
+          _h('Date', 110),
+          _h('Total Meds', null, flex: 2, align: TextAlign.center),
+          _h('Antibiotics', null, flex: 2, align: TextAlign.center),
+          _h('Abx %', null, flex: 2, align: TextAlign.center),
+          _h('Polypharmacy', null, flex: 2, align: TextAlign.center),
+          _h('Poly %', null, flex: 2, align: TextAlign.center),
         ],
       ),
     );
@@ -475,11 +390,13 @@ class _TableHeader extends StatelessWidget {
 // Row
 // =====================================================================
 class _RowTile extends StatelessWidget {
-  final MedicineReportRow row;
+  final int index;
+  final AntibioticReportRow row;
   final ColorScheme scheme;
   final bool isOdd;
 
   const _RowTile({
+    required this.index,
     required this.row,
     required this.scheme,
     required this.isOdd,
@@ -488,7 +405,7 @@ class _RowTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.symmetric(horizontal: 18),
       decoration: BoxDecoration(
         color: isOdd
@@ -497,108 +414,84 @@ class _RowTile extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // ---------- Medicine + meta ----------
-          Expanded(
-            flex: 4,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  row.medName,
-                  style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  [
-                    if (row.dosage != null && row.dosage!.isNotEmpty)
-                      row.dosage!,
-                    row.unit,
-                    if (row.companyBrand != null &&
-                        row.companyBrand!.isNotEmpty)
-                      row.companyBrand!,
-                  ].join('  ·  '),
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: scheme.onSurfaceVariant,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-
-          // ---------- Category ----------
           SizedBox(
-            width: 130,
+            width: 40,
             child: Text(
-              row.catName,
+              '$index',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 10.5,
-                fontWeight: FontWeight.w500,
+                fontSize: 11.5,
                 color: scheme.onSurfaceVariant,
+                fontWeight: FontWeight.w600,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
-
-          // ---------- Organizations ----------
+          SizedBox(
+            width: 110,
+            child: Text(
+              row.date,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
           Expanded(
-            flex: 3,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 8),
-              child: Text(
-                row.organizations ?? '—',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: scheme.onSurfaceVariant,
-                ),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+            flex: 2,
+            child: Text(
+              '${row.totalMedicines}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-
-          // ---------- In ----------
-          SizedBox(
-            width: 60,
+          Expanded(
+            flex: 2,
             child: Text(
-              row.totalIn > 0 ? '${row.totalIn}' : '',
-              textAlign: TextAlign.right,
+              '${row.antibioticCount}',
+              textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: scheme.secondary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
+                color: scheme.primary,
               ),
             ),
           ),
-
-          // ---------- Out ----------
-          SizedBox(
-            width: 60,
+          Expanded(
+            flex: 2,
             child: Text(
-              row.totalOut > 0 ? '${row.totalOut}' : '',
-              textAlign: TextAlign.right,
+              '${row.antibioticPercent.toStringAsFixed(1)}%',
+              textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
+                color: scheme.primary,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${row.polypharmacyCount}',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w700,
                 color: scheme.error,
               ),
             ),
           ),
-
-          // ---------- Balance ----------
-          SizedBox(
-            width: 80,
+          Expanded(
+            flex: 2,
             child: Text(
-              '${row.balance}',
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
+              '${row.polypharmacyPercent.toStringAsFixed(1)}%',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: scheme.error,
               ),
             ),
           ),
