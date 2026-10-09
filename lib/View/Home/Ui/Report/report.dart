@@ -23,13 +23,13 @@ class ReportView extends StatelessWidget {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: scheme.primaryContainer,
+                    color: scheme.primaryContainer.withValues(alpha: .5),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   alignment: Alignment.center,
                   child: Icon(
                     Icons.insert_chart_outlined,
-                    size: 24,
+                    size: 32,
                     color: scheme.onPrimaryContainer,
                   ),
                 ),
@@ -45,9 +45,8 @@ class ReportView extends StatelessWidget {
                             .headlineSmall
                             ?.copyWith(fontWeight: FontWeight.w600),
                       ),
-                      const SizedBox(height: 2),
                       Text(
-                        'Choose a report to view or print',
+                        'Choose a report to view',
                         style: TextStyle(
                           fontSize: 12.5,
                           color: scheme.onSurfaceVariant,

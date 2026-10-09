@@ -129,6 +129,7 @@ class _ZFormDialogState extends State<ZFormDialog> {
               ),
               ZOutlineButton(
                 disable: !widget.isButtonEnabled,
+                isActive: true,
                 height: 35,
                 width: 100,
                 label: widget.actionLabel ?? Text(tr.save),

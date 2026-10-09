@@ -8,6 +8,7 @@ import 'package:zpharmacy/Features/zdropdown.dart';
 import 'package:zpharmacy/View/Home/Ui/Stock/stock_details.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 
+import '../../../../Features/Widgets/shimmer.dart';
 import 'bloc/stock_bloc.dart';
 import 'model/stock_model.dart';
 import 'stock_form.dart';
@@ -470,7 +471,10 @@ class _StockViewState extends State<StockView> {
               child: BlocBuilder<StockBloc, StockState>(
                 builder: (context, state) {
                   if (state is StockLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return UniversalShimmer.dataList(
+                      itemCount: 15,
+                      numberOfColumns: 5,
+                    );
                   }
                   if (state is StockFailure) {
                     return Center(

@@ -28,6 +28,7 @@ class OrganizationBloc extends Bloc<OrganizationEvent, OrganizationState> {
       Emitter<OrganizationState> emit) async {
     emit(const OrganizationLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getOrganizations();
       emit(OrganizationLoaded(items));
     } on ApiException catch (e) {

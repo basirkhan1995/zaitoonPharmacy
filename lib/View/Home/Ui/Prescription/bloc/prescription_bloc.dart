@@ -43,6 +43,7 @@ class PrescriptionBloc extends Bloc<PrescriptionEvent, PrescriptionState> {
     emit(const PrescriptionLoading());
 
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getPrescriptions(
         search: event.search,
         from: event.from,

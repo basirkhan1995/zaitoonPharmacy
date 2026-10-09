@@ -102,7 +102,7 @@ class _AddEditMedicineDialogState extends State<AddEditMedicineDialog> {
 
           return ZFormDialog(
             title: _isEdit ? tr.editMedicine : tr.newMedicine,
-            icon: Icons.medication_outlined,
+            icon: Icons.medical_information_outlined,
             width: 480,
             padding: const EdgeInsets.all(16),
             isButtonEnabled: !saving,
@@ -132,13 +132,32 @@ class _AddEditMedicineDialogState extends State<AddEditMedicineDialog> {
                       ),
                       const SizedBox(height: 12),
 
-                      ZTextFieldEntitled(
-                        title: tr.unit,
-                        controller: _unitCtrl,
-                        validator: (v) =>
-                        (v == null || v.trim().isEmpty)
-                            ? 'Required'
-                            : null,
+                      Row(
+                        spacing: 8,
+                        children: [
+                          Expanded(
+                            child: ZTextFieldEntitled(
+                              title: tr.unit,
+                              controller: _unitCtrl,
+                              validator: (v) =>
+                              (v == null || v.trim().isEmpty)
+                                  ? 'Required'
+                                  : null,
+                            ),
+                          ),
+                          Expanded(
+                            flex: 2,
+                            child: MedicineCategoryDropView(
+                              title: tr.category,
+                              hint: tr.selectCategory,
+                              selected: _category,
+                              enabled: !saving,
+                              onSelected: (cat) {
+                                setState(() => _category = cat);
+                              },
+                            ),
+                          ),
+                        ],
                       ),
                       const SizedBox(height: 12),
 
@@ -154,15 +173,7 @@ class _AddEditMedicineDialogState extends State<AddEditMedicineDialog> {
                       ),
                       const SizedBox(height: 12),
 
-                      MedicineCategoryDropView(
-                        title: tr.category,
-                        hint: tr.selectCategory,
-                        selected: _category,
-                        enabled: !saving,
-                        onSelected: (cat) {
-                          setState(() => _category = cat);
-                        },
-                      ),
+
                     ],
                   ),
                 ),

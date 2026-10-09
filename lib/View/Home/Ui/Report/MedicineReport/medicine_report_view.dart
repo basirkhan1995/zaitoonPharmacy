@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
 
+import '../../../../../Features/Widgets/shimmer.dart';
 import 'bloc/medicine_report_bloc.dart';
 import 'model/medicine_report_model.dart';
 
@@ -183,7 +184,10 @@ class _MedicineReportViewState extends State<MedicineReportView> {
                   return const Center(child: Text('Loading…'));
                 }
                 if (state is MedicineReportLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return UniversalShimmer.dataList(
+                    itemCount: 15,
+                    numberOfColumns: 5,
+                  );
                 }
                 if (state is MedicineReportFailure) {
                   return Center(

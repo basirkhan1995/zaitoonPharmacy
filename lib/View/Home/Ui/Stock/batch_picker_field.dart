@@ -82,7 +82,6 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
       _showOverlay();
-      // Load once on first focus
       context.read<BatchBloc>().add(const BatchLoadRequested());
     } else {
       Future.delayed(const Duration(milliseconds: 150), () {
@@ -287,6 +286,99 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
     }
   }
 
+  // -----------------------------------------------------------------
+  // Header strip shown at the top of the overlay
+  // -----------------------------------------------------------------
+  Widget _buildSearchHeader(ColorScheme scheme) {
+    final hasQuery = _query.isNotEmpty;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerLow,
+        border: Border(
+          bottom: BorderSide(
+            color: scheme.outlineVariant.withValues(alpha: 0.4),
+            width: 0.5,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.qr_code_2_outlined, size: 16, color: scheme.tertiary),
+          const SizedBox(width: 8),
+
+          // Search hint / current query
+          Expanded(
+            child: RichText(
+              overflow: TextOverflow.ellipsis,
+              text: TextSpan(
+                style: TextStyle(
+                  fontSize: 13,
+                  color: scheme.onSurfaceVariant,
+                ),
+                children: [
+                  TextSpan(
+                    text: hasQuery
+                        ? 'Searching batch for '
+                        : 'Type to search batches',
+                  ),
+                  if (hasQuery)
+                    TextSpan(
+                      text: '"$_query"',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // Match count
+          if (!_loading && _items.isNotEmpty)
+            Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: scheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '${_items.length} match${_items.length == 1 ? '' : 'es'}',
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: scheme.onTertiaryContainer,
+                ),
+              ),
+            ),
+
+          // Keyboard hint
+          if (!hasQuery) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: scheme.surfaceContainerHighest,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Text(
+                '↑ ↓ to navigate · Enter to select · Esc to close',
+                style: TextStyle(
+                  fontSize: 10.5,
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildOverlayContent() {
     final scheme = Theme.of(context).colorScheme;
     final screen = MediaQuery.of(context).size;
@@ -296,194 +388,213 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
         alignment: Alignment.center,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: 720,
+            maxWidth: 900,                       // ← wider overlay
             maxHeight: screen.height * 0.7,
             minHeight: 240,
           ),
           child: Material(
-            elevation: 8,
-            borderRadius: BorderRadius.circular(12),
+            elevation: 2,                        // ← subtle elevation
+            borderRadius: BorderRadius.circular(8),   // ← 8 radius
             color: scheme.surface,
             clipBehavior: Clip.antiAlias,
-            child: _loading
-                ? const Padding(
-              padding: EdgeInsets.all(24),
-              child: Center(child: CircularProgressIndicator()),
-            )
-                : _items.isEmpty
-                ? Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.search_off,
-                      size: 40,
-                      color: scheme.onSurfaceVariant
-                          .withValues(alpha: 0.5)),
-                  const SizedBox(height: 8),
-                  Text(
-                    _query.isEmpty
-                        ? 'No active batches'
-                        : 'No matches for "$_query"',
-                    style: TextStyle(
-                        color: scheme.onSurfaceVariant),
-                  ),
-                ],
-              ),
-            )
-                : Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            child: Column(
               children: [
-                Expanded(
-                  flex: 1,
-                  child: ListView.builder(
-                    controller: _scrollCtrl,
-                    itemCount: _items.length,
-                    itemBuilder: (_, i) {
-                      final b = _items[i];
-                      final isHl = i == _highlighted;
+                // -------- Search header --------
+                _buildSearchHeader(scheme),
 
-                      return InkWell(
-                        onTap: () => _select(b),
-                        onHover: (h) {
-                          if (h && _highlighted != i) {
-                            setState(() => _highlighted = i);
-                            _overlay?.markNeedsBuild();
-                          }
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 10),
-                          decoration: BoxDecoration(
-                            color: isHl
-                                ? scheme.primary
-                                .withValues(alpha: 0.08)
-                                : Colors.transparent,
-                            border: Border(
-                              bottom: BorderSide(
-                                color: scheme.outlineVariant
-                                    .withValues(alpha: 0.4),
-                                width: 0.5,
-                              ),
-                              left: isHl
-                                  ? BorderSide(
-                                  color: scheme.primary,
-                                  width: 3)
-                                  : BorderSide.none,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
+                // -------- Body --------
+                Expanded(
+                  child: _loading
+                      ? const Padding(
+                    padding: EdgeInsets.all(24),
+                    child:
+                    Center(child: CircularProgressIndicator()),
+                  )
+                      : _items.isEmpty
+                      ? Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.search_off,
+                          size: 40,
+                          color: scheme.onSurfaceVariant
+                              .withValues(alpha: 0.5),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _query.isEmpty
+                              ? 'No active batches'
+                              : 'No matches for "$_query"',
+                          style: TextStyle(
+                              color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                  )
+                      : Row(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.stretch,
+                    children: [
+                      // ---- Left: list ----
+                      Expanded(
+                        flex: 1,
+                        child: ListView.builder(
+                          controller: _scrollCtrl,
+                          itemCount: _items.length,
+                          itemBuilder: (_, i) {
+                            final b = _items[i];
+                            final isHl = i == _highlighted;
+
+                            return InkWell(
+                              onTap: () => _select(b),
+                              onHover: (h) {
+                                if (h && _highlighted != i) {
+                                  setState(
+                                          () => _highlighted = i);
+                                  _overlay?.markNeedsBuild();
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets
+                                    .symmetric(
+                                    horizontal: 12, vertical: 10),
                                 decoration: BoxDecoration(
-                                  color:
-                                  scheme.tertiaryContainer,
-                                  borderRadius:
-                                  BorderRadius.circular(8),
+                                  color: isHl
+                                      ? scheme.tertiary
+                                      .withValues(alpha: 0.08)
+                                      : Colors.transparent,
+                                  border: Border(
+                                    bottom: BorderSide(
+                                      color: scheme
+                                          .outlineVariant
+                                          .withValues(alpha: 0.4),
+                                      width: 0.5,
+                                    ),
+                                    left: isHl
+                                        ? BorderSide(
+                                        color: scheme
+                                            .tertiary,
+                                        width: 3)
+                                        : BorderSide.none,
+                                  ),
                                 ),
-                                alignment: Alignment.center,
-                                child: Icon(
-                                  Icons.inventory_2_outlined,
-                                  size: 16,
-                                  color: scheme
-                                      .onTertiaryContainer,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                                child: Row(
                                   children: [
-                                    Text(
-                                      b.medName,
-                                      maxLines: 1,
-                                      overflow:
-                                      TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w600,
-                                        fontSize: 13.5,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment
+                                            .start,
+                                        children: [
+                                          Text(
+                                            b.medName,
+                                            maxLines: 1,
+                                            overflow:
+                                            TextOverflow
+                                                .ellipsis,
+                                            style: const TextStyle(
+                                              fontWeight:
+                                              FontWeight
+                                                  .w600,
+                                              fontSize: 14.5,
+                                            ),
+                                          ),
+                                          const SizedBox(
+                                              height: 2),
+                                          Text(
+                                            'Batch ${b.batchNo}  ·  EXP ${b.expiryDate}',
+                                            maxLines: 1,
+                                            overflow:
+                                            TextOverflow
+                                                .ellipsis,
+                                            style: TextStyle(
+                                              fontSize: 11.5,
+                                              color: scheme
+                                                  .onSurfaceVariant,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Batch ${b.batchNo}  ·  exp ${b.expiryDate}',
-                                      maxLines: 1,
-                                      overflow:
-                                      TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: 11.5,
-                                        color: scheme
-                                            .onSurfaceVariant,
+                                    Container(
+                                      padding:
+                                      const EdgeInsets
+                                          .symmetric(
+                                          horizontal: 6,
+                                          vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: b.quantityRemaining >
+                                            0
+                                            ? scheme
+                                            .secondaryContainer
+                                            : scheme
+                                            .errorContainer,
+                                        borderRadius:
+                                        BorderRadius
+                                            .circular(8),
+                                      ),
+                                      child: Text(
+                                        '${b.quantityRemaining}',
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight:
+                                          FontWeight.w700,
+                                          color: b.quantityRemaining >
+                                              0
+                                              ? scheme
+                                              .onSecondaryContainer
+                                              : scheme
+                                              .onErrorContainer,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
                               ),
-                              Container(
-                                padding: const EdgeInsets
-                                    .symmetric(
-                                    horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: b.quantityRemaining > 0
-                                      ? scheme.secondaryContainer
-                                      : scheme.errorContainer,
-                                  borderRadius:
-                                  BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  '${b.quantityRemaining}',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    color:
-                                    b.quantityRemaining > 0
-                                        ? scheme
-                                        .onSecondaryContainer
-                                        : scheme
-                                        .onErrorContainer,
-                                  ),
+                            );
+                          },
+                        ),
+                      ),
+
+                      // ---- Right: details ----
+                      SizedBox(
+                        width: 320,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: scheme.surfaceContainerLow,
+                            border: Border(
+                              left: BorderSide(
+                                color: scheme.outlineVariant
+                                    .withValues(alpha: 0.4),
+                                width: 1,
+                              ),
+                            ),
+                          ),
+                          child: _highlighted >= 0 &&
+                              _highlighted < _items.length
+                              ? _detailsPanel(
+                              _items[_highlighted])
+                              : Center(
+                            child: Padding(
+                              padding:
+                              const EdgeInsets.all(24),
+                              child: Text(
+                                'Hover a batch to see details',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  color: scheme
+                                      .onSurfaceVariant,
+                                  fontSize: 12.5,
                                 ),
                               ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                SizedBox(
-                  width: 320,
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: scheme.surfaceContainerLow,
-                      border: Border(
-                        left: BorderSide(
-                          color: scheme.outlineVariant
-                              .withValues(alpha: 0.4),
-                          width: 1,
-                        ),
-                      ),
-                    ),
-                    child: _highlighted >= 0 &&
-                        _highlighted < _items.length
-                        ? _detailsPanel(_items[_highlighted])
-                        : Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          'Hover a batch to see details',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: scheme.onSurfaceVariant,
-                            fontSize: 12.5,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                    ],
                   ),
                 ),
               ],
@@ -509,12 +620,12 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                 height: 48,
                 decoration: BoxDecoration(
                   color: scheme.tertiaryContainer,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  Icons.inventory_2_outlined,
-                  size: 22,
+                  Icons.medical_information_outlined,
+                  size: 33,
                   color: scheme.onTertiaryContainer,
                 ),
               ),
@@ -567,7 +678,7 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
               children: [
                 Icon(
                   b.quantityRemaining > 0
-                      ? Icons.inventory_2_outlined
+                      ? Icons.medical_information_outlined
                       : Icons.block_outlined,
                   color: b.quantityRemaining > 0
                       ? scheme.onSecondaryContainer
@@ -686,7 +797,7 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                 ),
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(
-                    vertical: 14, horizontal: 12),
+                    vertical: 12, horizontal: 12),
                 filled: true,
                 fillColor: scheme.surfaceContainerLow,
                 border: OutlineInputBorder(
@@ -709,7 +820,6 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
               ),
             ),
           ),
-          // Silently listen to the BatchBloc for state updates
           BlocListener<BatchBloc, BatchState>(
             listenWhen: (prev, curr) =>
             curr is BatchLoaded ||

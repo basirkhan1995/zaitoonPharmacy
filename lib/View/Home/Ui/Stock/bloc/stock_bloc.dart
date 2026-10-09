@@ -25,6 +25,7 @@ class StockBloc extends Bloc<StockEvent, StockState> {
   Future<void> _onLoad(StockLoadRequested event, Emitter<StockState> emit) async {
     emit(const StockLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getStockInvoices(
         search:       event.search,
         from:         event.from,

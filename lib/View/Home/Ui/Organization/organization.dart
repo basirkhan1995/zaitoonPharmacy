@@ -1,6 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/toast.dart';
+import 'package:zpharmacy/Features/Widgets/zbutton.dart'; // ZOutlineButton
+import '../../../../Features/Widgets/shimmer.dart';
 import '../../../../Services/api_services.dart';
 import 'add_edit_org.dart';
 import 'bloc/organization_bloc.dart';
@@ -14,9 +17,38 @@ class OrganizationView extends StatefulWidget {
 }
 
 class _OrganizationViewState extends State<OrganizationView> {
+  final _searchCtrl = TextEditingController();
+  Timer? _debounce;
+  String _search = ''; // normalized (lowercased, trimmed) query
+
   @override
   void initState() {
     super.initState();
+    context.read<OrganizationBloc>().add(const OrganizationLoadRequested());
+  }
+
+  @override
+  void dispose() {
+    _debounce?.cancel();
+    _searchCtrl.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() {}); // rebuild so the clear (×) icon shows/hides
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 250), () {
+      if (!mounted) return;
+      setState(() => _search = value.trim().toLowerCase());
+    });
+  }
+
+  void _clearSearch() {
+    _searchCtrl.clear();
+    setState(() => _search = '');
+  }
+
+  void _reload() {
     context.read<OrganizationBloc>().add(const OrganizationLoadRequested());
   }
 
@@ -76,25 +108,29 @@ class _OrganizationViewState extends State<OrganizationView> {
       },
     );
     if (ok == true && mounted) {
-      context.read<OrganizationBloc>().add(OrganizationDeleteRequested(o.orgId));
+      context
+          .read<OrganizationBloc>()
+          .add(OrganizationDeleteRequested(o.orgId));
     }
+  }
+
+  List<Organization> _applyFilter(List<Organization> all) {
+    if (_search.isEmpty) return all;
+    return all.where((o) {
+      final name = o.orgName.toLowerCase();
+      final contact = (o.contact ?? '').toLowerCase();
+      final phone = (o.phone ?? '').toLowerCase();
+      return name.contains(_search) ||
+          contact.contains(_search) ||
+          phone.contains(_search);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Organizations'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            tooltip: 'Reload',
-            onPressed: () => context
-                .read<OrganizationBloc>()
-                .add(const OrganizationLoadRequested()),
-          ),
-        ],
-      ),
       body: BlocListener<OrganizationBloc, OrganizationState>(
         listener: (context, state) {
           if (state is OrganizationFailure) {
@@ -114,62 +150,166 @@ class _OrganizationViewState extends State<OrganizationView> {
             );
           }
         },
-        child: BlocBuilder<OrganizationBloc, OrganizationState>(
-          builder: (context, state) {
-            if (state is OrganizationLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is OrganizationFailure) {
-              return _ErrorView(
-                message: state.message,
-                onRetry: () => context
-                    .read<OrganizationBloc>()
-                    .add(const OrganizationLoadRequested()),
-              );
-            }
+        child: Column(
+          children: [
+            // =====================================================
+            // HEADER — icon + title on left, buttons on right
+            // =====================================================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // Icon badge
+                  Icon(
+                    Icons.business_outlined,
+                    size: 28,
+                    color: scheme.onPrimaryContainer,
+                  ),
+                  const SizedBox(width: 12),
 
-            final items = state is OrganizationWithItems
-                ? state.items
-                : const <Organization>[];
+                  // Title
+                  Expanded(
+                    child: Text(
+                      'Organizations',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context)
+                          .textTheme
+                          .headlineSmall
+                          ?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSurface,
+                      ),
+                    ),
+                  ),
 
-            if (items.isEmpty) {
-              return const _EmptyView();
-            }
+                  // Actions
+                  Row(
+                    spacing: 8,
+                    children: [
+                      ZOutlineButton(
+                        onPressed: _reload,
+                        icon: Icons.refresh,
+                        label: const Text('Refresh'),
+                      ),
+                      ZOutlineButton(
+                        onPressed: () => _openAddEdit(),
+                        icon: Icons.add,
+                        isActive: true,
+                        label: const Text('New'),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
-            return RefreshIndicator(
-              onRefresh: () async {
-                context
-                    .read<OrganizationBloc>()
-                    .add(const OrganizationLoadRequested());
-              },
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 96),
-                itemCount: items.length,
-                itemBuilder: (_, i) => Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _OrgCard(
-                    org: items[i],
-                    onTap: () => _openAddEdit(org: items[i]),
-                    onEdit: () => _openAddEdit(org: items[i]),
-                    onDelete: () => _confirmDelete(items[i]),
+            // =====================================================
+            // SEARCH BAR
+            // =====================================================
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+              child: TextField(
+                controller: _searchCtrl,
+                onChanged: _onSearchChanged,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: 'Search organization',
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  suffixIcon: _searchCtrl.text.isEmpty
+                      ? null
+                      : IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    tooltip: 'Clear',
+                    onPressed: _clearSearch,
+                  ),
+                  isDense: true,
+                  contentPadding: const EdgeInsets.symmetric(
+                      vertical: 10, horizontal: 12),
+                  filled: true,
+                  fillColor: scheme.surfaceContainerLow,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(3),
+                    borderSide: BorderSide(
+                      color: scheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(3),
+                    borderSide: BorderSide(
+                      color: scheme.outline.withValues(alpha: 0.3),
+                    ),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(3),
+                    borderSide: BorderSide(
+                      color: scheme.primary,
+                      width: 1.1,
+                    ),
                   ),
                 ),
               ),
-            );
-          },
+            ),
+
+            // =====================================================
+            // LIST
+            // =====================================================
+            Expanded(
+              child: BlocBuilder<OrganizationBloc, OrganizationState>(
+                builder: (context, state) {
+                  if (state is OrganizationLoading) {
+                    return UniversalShimmer.accountList(
+                      itemCount: 8,
+                      useAlternatingColors: true,
+                    );
+                  }
+                  if (state is OrganizationFailure) {
+                    return _ErrorView(
+                      message: state.message,
+                      onRetry: _reload,
+                    );
+                  }
+
+                  final allItems = state is OrganizationWithItems
+                      ? state.items
+                      : const <Organization>[];
+
+                  final items = _applyFilter(allItems);
+
+                  if (items.isEmpty) {
+                    final hasSearch = _searchCtrl.text.trim().isNotEmpty;
+                    return _EmptyView(hasSearch: hasSearch);
+                  }
+
+                  return RefreshIndicator(
+                    onRefresh: () async => _reload(),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+                      itemCount: items.length,
+                      itemBuilder: (_, i) => Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _OrgCard(
+                          org: items[i],
+                          onTap: () => _openAddEdit(org: items[i]),
+                          onEdit: () => _openAddEdit(org: items[i]),
+                          onDelete: () => _confirmDelete(items[i]),
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _openAddEdit(),
-        icon: const Icon(Icons.add),
-        label: const Text('Add Organization'),
       ),
     );
   }
 }
 
 // =====================================================================
-// Card
+// Card (compact)
 // =====================================================================
 class _OrgCard extends StatelessWidget {
   final Organization org;
@@ -188,21 +328,21 @@ class _OrgCard extends StatelessWidget {
 
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(12),
+      borderRadius: BorderRadius.circular(5),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(5),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(12, 12, 4, 12),
+          padding: const EdgeInsets.fromLTRB(10, 8, 2, 8),
           child: Row(
             children: [
               // Logo
               Container(
-                width: 52,
-                height: 52,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(10),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: org.hasLogo
@@ -214,7 +354,7 @@ class _OrgCard extends StatelessWidget {
                 )
                     : _initial(scheme, org.orgName),
               ),
-              const SizedBox(width: 14),
+              const SizedBox(width: 10),
 
               // Info
               Expanded(
@@ -226,36 +366,47 @@ class _OrgCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 15,
+                        fontSize: 14,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
-                    if (org.contact != null && org.contact!.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      Text(
-                        org.contact!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 12.5,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ],
-                    if (org.phone != null && org.phone!.isNotEmpty) ...[
-                      const SizedBox(height: 3),
+                    if ((org.contact != null && org.contact!.isNotEmpty) ||
+                        (org.phone != null && org.phone!.isNotEmpty)) ...[
+                      const SizedBox(height: 2),
                       Row(
                         children: [
-                          Icon(Icons.phone_outlined,
-                              size: 12, color: scheme.onSurfaceVariant),
-                          const SizedBox(width: 4),
-                          Text(
-                            org.phone!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: scheme.onSurfaceVariant,
+                          if (org.contact != null &&
+                              org.contact!.isNotEmpty)
+                            Flexible(
+                              child: Text(
+                                org.contact!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: scheme.onSurfaceVariant,
+                                ),
+                              ),
                             ),
-                          ),
+                          if (org.contact != null &&
+                              org.contact!.isNotEmpty &&
+                              org.phone != null &&
+                              org.phone!.isNotEmpty)
+                            Text(
+                              '  •  ',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          if (org.phone != null && org.phone!.isNotEmpty)
+                            Text(
+                              org.phone!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
                         ],
                       ),
                     ],
@@ -263,9 +414,12 @@ class _OrgCard extends StatelessWidget {
                 ),
               ),
 
-              // Popup
+              // Menu
               PopupMenuButton<_MenuAction>(
-                icon: Icon(Icons.more_vert, color: scheme.onSurfaceVariant),
+                icon: Icon(Icons.more_vert,
+                    size: 20, color: scheme.onSurfaceVariant),
+                padding: EdgeInsets.zero,
+                splashRadius: 20,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -319,7 +473,7 @@ class _OrgCard extends StatelessWidget {
       style: TextStyle(
         color: scheme.onPrimaryContainer,
         fontWeight: FontWeight.w600,
-        fontSize: 20,
+        fontSize: 16,
       ),
     ),
   );
@@ -327,8 +481,12 @@ class _OrgCard extends StatelessWidget {
 
 enum _MenuAction { edit, delete }
 
+// =====================================================================
+// Empty view (search-aware)
+// =====================================================================
 class _EmptyView extends StatelessWidget {
-  const _EmptyView();
+  final bool hasSearch;
+  const _EmptyView({required this.hasSearch});
 
   @override
   Widget build(BuildContext context) {
@@ -339,12 +497,14 @@ class _EmptyView extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.business_outlined,
-                size: 56,
-                color: scheme.onSurfaceVariant.withValues(alpha: 0.5)),
+            Icon(
+              hasSearch ? Icons.search_off : Icons.business_outlined,
+              size: 56,
+              color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
+            ),
             const SizedBox(height: 14),
             Text(
-              'No organizations yet',
+              hasSearch ? 'No matches' : 'No organizations yet',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -353,7 +513,10 @@ class _EmptyView extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              'Tap "Add Organization" to get started',
+              hasSearch
+                  ? 'Try a different search term'
+                  : 'Tap "New" to get started',
+              textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
             ),
           ],

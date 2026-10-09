@@ -21,6 +21,7 @@ class MedicineReportBloc
       ) async {
     emit(const MedicineReportLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final report = await _repo.getMedicineReport(
         from:   event.from,
         to:     event.to,

@@ -21,6 +21,7 @@ class StockCardBloc extends Bloc<StockCardEvent, StockCardState> {
       ) async {
     emit(const StockCardLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final report = await _repo.getStockCardReport(
         medId:   event.medId,
         from:    event.from,

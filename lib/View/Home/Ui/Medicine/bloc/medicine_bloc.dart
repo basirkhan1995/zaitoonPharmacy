@@ -29,10 +29,10 @@ class MedicineBloc extends Bloc<MedicineEvent, MedicineState> {
   // -----------------------------------------------------------------
   // Load list
   // -----------------------------------------------------------------
-  Future<void> _onLoad(
-      MedicineLoadRequested event, Emitter<MedicineState> emit) async {
+  Future<void> _onLoad(MedicineLoadRequested event, Emitter<MedicineState> emit) async {
     emit(const MedicineLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getMedicines(search: event.search);
       emit(MedicineLoaded(items));
     } on ApiException catch (e) {

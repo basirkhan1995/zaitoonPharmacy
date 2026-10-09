@@ -8,6 +8,7 @@ import 'package:zpharmacy/Features/zdropdown.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/prescription_details.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 import '../../../../Features/Date/z_range_picker.dart';
+import '../../../../Features/Widgets/shimmer.dart';
 import 'bloc/prescription_bloc.dart';
 import 'model/prescription_model.dart';
 import 'prescription_form.dart';
@@ -278,7 +279,7 @@ class _PrescriptionViewState extends State<PrescriptionView> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   // ---- Icon badge ----
                   Icon(
@@ -326,11 +327,12 @@ class _PrescriptionViewState extends State<PrescriptionView> {
             // FILTER BAR
             // =====================================================
             Padding(
-              padding: const EdgeInsets.fromLTRB(8, 12, 16, 8),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Column(
                 children: [
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.end,
+                    spacing: 2,
                     children: [
                       // ----- Search -----
                       Expanded(
@@ -470,9 +472,11 @@ class _PrescriptionViewState extends State<PrescriptionView> {
               child: BlocBuilder<PrescriptionBloc, PrescriptionState>(
                 builder: (context, state) {
                   if (state is PrescriptionLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return UniversalShimmer.dataList(
+                      itemCount: 15,
+                      numberOfColumns: 5,
+                    );
                   }
-
                   if (state is PrescriptionFailure) {
                     return Center(
                       child: Padding(
@@ -722,10 +726,10 @@ class _PrescriptionCard extends StatelessWidget {
 
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 8, 4, 8),
           child: Row(

@@ -5,6 +5,7 @@ import 'package:zpharmacy/Features/Widgets/toast.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 
+import '../../../../Features/Widgets/shimmer.dart';
 import '../Settings/Ui/Category/bloc/category_bloc.dart';
 import 'add_edit_med.dart';
 import 'bloc/medicine_bloc.dart';
@@ -188,6 +189,12 @@ class _MedicineViewState extends State<MedicineView> {
                         label: const Text('Refresh'),
                       ),
                       ZOutlineButton(
+                        onPressed: _reload,
+                        backgroundHover: Colors.lightGreen,
+                        icon: Icons.file_upload_outlined,
+                        label: const Text('Import Excel'),
+                      ),
+                      ZOutlineButton(
                         onPressed: () => _openAddEdit(),
                         icon: Icons.add,
                         isActive: true,
@@ -256,7 +263,10 @@ class _MedicineViewState extends State<MedicineView> {
               child: BlocBuilder<MedicineBloc, MedicineState>(
                 builder: (context, state) {
                   if (state is MedicineLoading) {
-                    return const Center(child: CircularProgressIndicator());
+                    return UniversalShimmer.dataList(
+                      itemCount: 15,
+                      numberOfColumns: 5,
+                    );
                   }
                   if (state is MedicineFailure) {
                     return _ErrorView(
@@ -328,16 +338,12 @@ class _MedicineCard extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 4, 12),
+          padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
           child: Row(
             children: [
               Container(
                 width: 44,
                 height: 44,
-                decoration: BoxDecoration(
-                  color: scheme.primaryContainer,
-                  borderRadius: BorderRadius.circular(8),
-                ),
                 alignment: Alignment.center,
                 child: Text(
                   medicine.medName.isNotEmpty

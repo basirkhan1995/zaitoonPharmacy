@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
+import '../../../../../Features/Widgets/shimmer.dart';
 import '../../Medicine/bloc/medicine_bloc.dart';
 import '../../Medicine/medcine_field.dart';
 import '../../Medicine/model/medicine_model.dart';
@@ -233,7 +234,10 @@ class _StockCardViewState extends State<StockCardView> {
                   return const _EmptyPrompt();
                 }
                 if (state is StockCardLoading) {
-                  return const Center(child: CircularProgressIndicator());
+                  return UniversalShimmer.dataList(
+                    itemCount: 15,
+                    numberOfColumns: 5,
+                  );
                 }
                 if (state is StockCardFailure) {
                   return Center(

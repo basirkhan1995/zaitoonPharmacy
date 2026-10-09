@@ -19,6 +19,7 @@ class BatchBloc extends Bloc<BatchEvent, BatchState> {
   Future<void> _onLoad(BatchLoadRequested event, Emitter<BatchState> emit) async {
     emit(const BatchLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getActiveBatches(search: event.search);
       emit(BatchLoaded(items));
     } on ApiException catch (e) {
