@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/toast.dart';
@@ -21,6 +23,7 @@ class MedicineView extends StatefulWidget {
 class _MedicineViewState extends State<MedicineView> {
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
+  bool _isUploadingExcel = false;
 
   @override
   void initState() {
@@ -55,6 +58,248 @@ class _MedicineViewState extends State<MedicineView> {
     context.read<MedicineBloc>().add(const MedicineLoadRequested());
   }
 
+  // ===================================================================
+  // EXCEL IMPORT
+  // ===================================================================
+  Future<void> _pickAndUploadExcel() async {
+    final PlatformFile? picked = await FilePicker.pickFile(
+      type: FileType.custom,
+      allowedExtensions: ['xlsx', 'xls'],
+    );
+
+    final path = picked?.path;
+    if (path == null || !mounted) return;
+
+    setState(() => _isUploadingExcel = true);
+    context.read<MedicineBloc>().add(
+      MedicineImportExcelRequested(File(path)),
+    );
+  }
+
+  void _showExcelSummary(MedicineExcelUploadedState state) {
+    final scheme = Theme.of(context).colorScheme;
+    final textTheme = Theme.of(context).textTheme;
+
+    final hasSkipped = state.skipped.isNotEmpty;
+    final hasErrors = state.errors.isNotEmpty;
+    final isPerfect = !hasSkipped && !hasErrors && state.inserted > 0;
+
+    final accent = isPerfect ? Colors.green.shade600 : scheme.primary;
+    final statusIcon =
+    isPerfect ? Icons.check_circle_outline : Icons.info_outline;
+    final statusText = isPerfect
+        ? 'All rows imported successfully'
+        : hasErrors
+        ? 'Completed with errors'
+        : 'Completed with skipped rows';
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogCtx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        title: Column(
+          children: [
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: accent.withValues(alpha: .12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(statusIcon, color: accent, size: 28),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Import Complete',
+              style: textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              statusText,
+              style: textTheme.bodySmall?.copyWith(color: scheme.outline),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: 380,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // ── Stat row
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                decoration: BoxDecoration(
+                  color: scheme.surfaceContainerHighest.withValues(alpha: .35),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    _statItem(
+                      '${state.inserted}',
+                      'Inserted',
+                      Colors.green.shade600,
+                    ),
+                    _divider(scheme),
+                    _statItem(
+                      '${state.skipped.length}',
+                      'Skipped',
+                      Colors.orange.shade700,
+                    ),
+                    _divider(scheme),
+                    _statItem(
+                      '${state.errors.length}',
+                      'Errors',
+                      scheme.error,
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Detail lists
+              if (hasSkipped || hasErrors) ...[
+                const SizedBox(height: 14),
+                Container(
+                  constraints: const BoxConstraints(maxHeight: 180),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: scheme.errorContainer.withValues(alpha: .25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (hasSkipped) ...[
+                          _sectionHeader(
+                            'Skipped',
+                            Icons.skip_next_rounded,
+                            Colors.orange.shade700,
+                          ),
+                          const SizedBox(height: 4),
+                          ...state.skipped.map((s) => _detailRow(
+                            'Row ${s['row']}',
+                            (s['reason'] ?? '').toString(),
+                            textTheme,
+                            scheme,
+                          )),
+                        ],
+                        if (hasSkipped && hasErrors)
+                          const SizedBox(height: 10),
+                        if (hasErrors) ...[
+                          _sectionHeader(
+                            'Errors',
+                            Icons.error_outline_rounded,
+                            scheme.error,
+                          ),
+                          const SizedBox(height: 4),
+                          ...state.errors.map((e) => _detailRow(
+                            'Row ${e['row']}',
+                            (e['error'] ?? '').toString(),
+                            textTheme,
+                            scheme,
+                          )),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ZOutlineButton(
+              isActive: true,
+              onPressed: () => Navigator.of(dialogCtx).pop(),
+              label: const Text('Done'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _statItem(String value, String label, Color color) => Expanded(
+    child: Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey.shade600,
+          ),
+        ),
+      ],
+    ),
+  );
+
+  Widget _divider(ColorScheme scheme) => Container(
+    width: 1,
+    height: 32,
+    color: scheme.outline.withValues(alpha: .15),
+  );
+
+  Widget _sectionHeader(String title, IconData icon, Color color) => Row(
+    children: [
+      Icon(icon, size: 15, color: color),
+      const SizedBox(width: 6),
+      Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.w600,
+          color: color,
+          fontSize: 12.5,
+        ),
+      ),
+    ],
+  );
+
+  Widget _detailRow(
+      String rowLabel,
+      String message,
+      TextTheme tt,
+      ColorScheme scheme,
+      ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 3, left: 4),
+      child: RichText(
+        text: TextSpan(
+          style: tt.bodySmall?.copyWith(
+            color: scheme.onSurface,
+            fontSize: 12,
+          ),
+          children: [
+            TextSpan(
+              text: '$rowLabel: ',
+              style: const TextStyle(fontWeight: FontWeight.w600),
+            ),
+            TextSpan(text: message),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ===================================================================
+  // Add / Edit
+  // ===================================================================
   Future<void> _openAddEdit({Medicine? medicine}) async {
     final medicineBloc = context.read<MedicineBloc>();
     final categoryBloc = context.read<CategoryBloc>();
@@ -72,6 +317,9 @@ class _MedicineViewState extends State<MedicineView> {
     );
   }
 
+  // ===================================================================
+  // Confirm delete
+  // ===================================================================
   Future<void> _confirmDelete(Medicine m) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -128,7 +376,16 @@ class _MedicineViewState extends State<MedicineView> {
     return Scaffold(
       body: BlocListener<MedicineBloc, MedicineState>(
         listener: (context, state) {
+          final isTerminalImportState =
+              state is MedicineExcelUploadedState || state is MedicineFailure;
+
+          if (isTerminalImportState && _isUploadingExcel) {
+            setState(() => _isUploadingExcel = false);
+          }
           if (state is MedicineFailure) {
+            if (_isUploadingExcel) {
+              setState(() => _isUploadingExcel = false);
+            }
             ToastManager.show(
               context: context,
               title: AppLocalizations.of(context)!.failed,
@@ -144,6 +401,13 @@ class _MedicineViewState extends State<MedicineView> {
               type: ToastType.success,
             );
           }
+          // ── Excel summary
+          if (state is MedicineExcelUploadedState) {
+            if (_isUploadingExcel) {
+              setState(() => _isUploadingExcel = false);
+            }
+            _showExcelSummary(state);
+          }
         },
         child: Column(
           children: [
@@ -155,7 +419,6 @@ class _MedicineViewState extends State<MedicineView> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Icon badge
                   Icon(
                     Icons.medical_information_outlined,
                     size: 28,
@@ -163,7 +426,6 @@ class _MedicineViewState extends State<MedicineView> {
                   ),
                   const SizedBox(width: 12),
 
-                  // Title
                   Expanded(
                     child: Text(
                       AppLocalizations.of(context)!.medicine,
@@ -179,7 +441,6 @@ class _MedicineViewState extends State<MedicineView> {
                     ),
                   ),
 
-                  // Actions
                   Row(
                     spacing: 8,
                     children: [
@@ -189,10 +450,14 @@ class _MedicineViewState extends State<MedicineView> {
                         label: const Text('Refresh'),
                       ),
                       ZOutlineButton(
-                        onPressed: _reload,
+                        onPressed: _isUploadingExcel
+                            ? null
+                            : _pickAndUploadExcel,
                         backgroundHover: Colors.lightGreen,
                         icon: Icons.file_upload_outlined,
-                        label: const Text('Import Excel'),
+                        label: Text(
+                          _isUploadingExcel ? 'Uploading…' : 'Import Excel',
+                        ),
                       ),
                       ZOutlineButton(
                         onPressed: () => _openAddEdit(),
@@ -230,7 +495,9 @@ class _MedicineViewState extends State<MedicineView> {
                   ),
                   isDense: true,
                   contentPadding: const EdgeInsets.symmetric(
-                      vertical: 10, horizontal: 12),
+                    vertical: 10,
+                    horizontal: 12,
+                  ),
                   filled: true,
                   fillColor: scheme.surfaceContainerLow,
                   border: OutlineInputBorder(
@@ -422,8 +689,10 @@ class _MedicineCard extends StatelessWidget {
 
               PopupMenuButton<_MenuAction>(
                 tooltip: 'More',
-                icon: Icon(Icons.more_vert,
-                    color: scheme.onSurfaceVariant),
+                icon: Icon(
+                  Icons.more_vert,
+                  color: scheme.onSurfaceVariant,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -444,8 +713,11 @@ class _MedicineCard extends StatelessWidget {
                     value: _MenuAction.edit,
                     child: Row(
                       children: [
-                        Icon(Icons.edit_outlined,
-                            size: 18, color: scheme.onSurfaceVariant),
+                        Icon(
+                          Icons.edit_outlined,
+                          size: 18,
+                          color: scheme.onSurfaceVariant,
+                        ),
                         const SizedBox(width: 10),
                         const Text('Edit'),
                       ],
@@ -455,11 +727,16 @@ class _MedicineCard extends StatelessWidget {
                     value: _MenuAction.delete,
                     child: Row(
                       children: [
-                        Icon(Icons.delete_outline,
-                            size: 18, color: scheme.error),
+                        Icon(
+                          Icons.delete_outline,
+                          size: 18,
+                          color: scheme.error,
+                        ),
                         const SizedBox(width: 10),
-                        Text('Delete',
-                            style: TextStyle(color: scheme.error)),
+                        Text(
+                          'Delete',
+                          style: TextStyle(color: scheme.error),
+                        ),
                       ],
                     ),
                   ),

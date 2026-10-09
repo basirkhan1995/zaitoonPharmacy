@@ -7,18 +7,14 @@ sealed class MedicineState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Nothing loaded yet
 final class MedicineInitial extends MedicineState {
   const MedicineInitial();
 }
 
-/// List is loading (nothing to show yet)
 final class MedicineLoading extends MedicineState {
   const MedicineLoading();
 }
 
-/// Base for any state that carries the current list.
-/// The UI can render items from any of these.
 abstract class MedicineWithItems extends MedicineState {
   final List<Medicine> items;
   const MedicineWithItems(this.items);
@@ -27,7 +23,6 @@ abstract class MedicineWithItems extends MedicineState {
   List<Object?> get props => [items];
 }
 
-/// List loaded (may be empty); optionally one selected
 final class MedicineLoaded extends MedicineWithItems {
   final Medicine? selected;
 
@@ -37,13 +32,10 @@ final class MedicineLoaded extends MedicineWithItems {
   List<Object?> get props => [items, selected];
 }
 
-/// A create / update / delete is in flight
 final class MedicineSaving extends MedicineWithItems {
   const MedicineSaving(super.items);
 }
 
-/// Operation succeeded — one-shot signal for the UI (toast, close dialog, …)
-/// Also carries the up-to-date list so the UI can keep rendering it.
 final class MedicineActionSuccess extends MedicineWithItems {
   final String message;
 
@@ -53,11 +45,28 @@ final class MedicineActionSuccess extends MedicineWithItems {
   List<Object?> get props => [items, message];
 }
 
-/// Something failed
 final class MedicineFailure extends MedicineState {
   final String message;
   const MedicineFailure(this.message);
 
   @override
   List<Object?> get props => [message];
+}
+
+/// One-shot signal fired after an Excel import completes.
+/// Carries the fresh list so the UI keeps rendering items under the dialog.
+final class MedicineExcelUploadedState extends MedicineWithItems {
+  final int inserted;
+  final List<Map<String, dynamic>> skipped;
+  final List<Map<String, dynamic>> errors;
+
+  const MedicineExcelUploadedState(
+      super.items, {
+        required this.inserted,
+        required this.skipped,
+        required this.errors,
+      });
+
+  @override
+  List<Object?> get props => [items, inserted, skipped, errors];
 }

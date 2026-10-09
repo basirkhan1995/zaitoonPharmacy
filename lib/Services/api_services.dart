@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -246,6 +248,33 @@ class ApiServices {
         onSendProgress: onSendProgress,
         options: Options(contentType: 'multipart/form-data'),
       ));
+
+  Future<Map<String, dynamic>> uploadFileJson(
+      String endpoint, {
+        required FormData data,
+        CancelToken? cancelToken,
+        ProgressCallback? onSendProgress,
+      }) async {
+    final response = await _dio.post(
+      endpoint,
+      data: data,
+      cancelToken: cancelToken,
+      onSendProgress: onSendProgress,
+      options: Options(contentType: 'multipart/form-data'),
+    );
+
+    final body = response.data;
+    if (body is Map) {
+      return Map<String, dynamic>.from(body);
+    }
+    if (body is String) {
+      // If your Dio is not auto-decoding JSON, decode it manually
+      return Map<String, dynamic>.from(
+        jsonDecode(body) as Map,
+      );
+    }
+    throw Exception('Unexpected body type: ${body.runtimeType}');
+  }
 
   Future<Response> downloadFile(
       String endpoint, {

@@ -7,7 +7,6 @@ sealed class MedicineEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Load the list
 final class MedicineLoadRequested extends MedicineEvent {
   final String? search;
   const MedicineLoadRequested({this.search});
@@ -16,7 +15,6 @@ final class MedicineLoadRequested extends MedicineEvent {
   List<Object?> get props => [search];
 }
 
-/// Load a single medicine (with batches)
 final class MedicineSelectRequested extends MedicineEvent {
   final int medId;
   const MedicineSelectRequested(this.medId);
@@ -25,12 +23,10 @@ final class MedicineSelectRequested extends MedicineEvent {
   List<Object?> get props => [medId];
 }
 
-/// Clear selection
 final class MedicineClearSelection extends MedicineEvent {
   const MedicineClearSelection();
 }
 
-/// Create
 final class MedicineCreateRequested extends MedicineEvent {
   final MedicineRequest request;
   const MedicineCreateRequested(this.request);
@@ -39,7 +35,6 @@ final class MedicineCreateRequested extends MedicineEvent {
   List<Object?> get props => [request];
 }
 
-/// Update
 final class MedicineUpdateRequested extends MedicineEvent {
   final int medId;
   final MedicineRequest request;
@@ -49,11 +44,19 @@ final class MedicineUpdateRequested extends MedicineEvent {
   List<Object?> get props => [medId, request];
 }
 
-/// Delete
 final class MedicineDeleteRequested extends MedicineEvent {
   final int medId;
   const MedicineDeleteRequested(this.medId);
 
   @override
   List<Object?> get props => [medId];
+}
+
+/// Import one Excel file. Path is used for equality.
+final class MedicineImportExcelRequested extends MedicineEvent {
+  final File file;
+  const MedicineImportExcelRequested(this.file);
+
+  @override
+  List<Object?> get props => [file.path];
 }

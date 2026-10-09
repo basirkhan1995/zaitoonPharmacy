@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:dio/dio.dart';
 import 'package:zpharmacy/View/Auth/auth_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
@@ -325,6 +327,24 @@ Future<void> deleteCategory(int catId) async {
       queryParams: qp,
     );
     return MedicineReport.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> addMedicineFromExcel({
+    required File excelFile,
+  }) async {
+    final fileName = excelFile.path.split(Platform.pathSeparator).last;
+
+    final formData = FormData.fromMap({
+      'excelFile': await MultipartFile.fromFile(
+        excelFile.path,
+        filename: fileName,
+      ),
+    });
+
+    return await _api.uploadFileJson(
+      "/api/medicines/import-excel",
+      data: formData,
+    );
   }
 
 }
