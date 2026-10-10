@@ -28,7 +28,7 @@ class _StockFormDialogState extends State<StockFormDialog> {
   final _noteCtrl      = TextEditingController();
 
   String _movementType = 'RECEIVE';
-  Organization? _selectedOrg;      // ← was int? _orgId
+  Organization? _selectedOrg;
   String _invoiceDate = '';
   bool _itemsPrefilled = false;
 
@@ -54,7 +54,6 @@ class _StockFormDialogState extends State<StockFormDialog> {
       _noteCtrl.text      = e.note ?? '';
       _movementType       = e.movementType;
 
-      // Prefill selected org from the invoice (id + name only)
       if (e.orgId != null) {
         _selectedOrg = Organization(
           orgId:   e.orgId!,
@@ -133,7 +132,6 @@ class _StockFormDialogState extends State<StockFormDialog> {
       _drafts.removeAt(i);
     });
   }
-
 
   void _toast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -320,13 +318,11 @@ class _StockFormDialogState extends State<StockFormDialog> {
                           )
                               : const SizedBox.shrink(),
                         ),
-
                       ]),
                       const SizedBox(height: 12),
 
-                      // ------------- Movement + Org -------------
-                      Row(
-                          children: [
+                      // ------------- Date + Note -------------
+                      Row(children: [
                         Expanded(
                           child: GenericDatePicker(
                             label: 'Invoice date *',
@@ -338,7 +334,7 @@ class _StockFormDialogState extends State<StockFormDialog> {
                             },
                           ),
                         ),
-                            const SizedBox(width: 12),
+                        const SizedBox(width: 12),
                         Expanded(
                           flex: 3,
                           child: ZTextFieldEntitled(
@@ -375,8 +371,7 @@ class _StockFormDialogState extends State<StockFormDialog> {
                             key: ValueKey(_drafts[i]),
                             draft: _drafts[i],
                             index: i + 1,
-                            isInbound: _isInbound,
-                            isAdjustment: _movementType == 'ADJUSTMENT',
+                            movementType: _movementType,   // ← was isInbound + isAdjustment
                             onRemove: _drafts.length > 1
                                 ? () => _removeItemRow(i)
                                 : null,
@@ -439,21 +434,20 @@ class StockItemDraft {
   }
 }
 
-
-///Stock Row
+// =====================================================================
+// Stock Item Row
+// =====================================================================
 class StockItemRow extends StatefulWidget {
   final StockItemDraft draft;
   final int index;
-  final bool isInbound;
-  final bool isAdjustment;
+  final String movementType;   // ← full type — derived inside
   final VoidCallback? onRemove;
 
   const StockItemRow({
     super.key,
     required this.draft,
     required this.index,
-    required this.isInbound,
-    required this.isAdjustment,
+    required this.movementType,
     this.onRemove,
   });
 
@@ -466,6 +460,13 @@ class _StockItemRowState extends State<StockItemRow> {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final d = widget.draft;
+
+    // ── Derive everything from movementType ─────────────────
+    final isInbound    = widget.movementType == 'RECEIVE' ||
+        widget.movementType == 'DONATION_IN';
+    final isAdjustment = widget.movementType == 'ADJUSTMENT';
+    final includeExpired = widget.movementType == 'EXPIRED' ||
+        widget.movementType == 'DAMAGE';
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
@@ -499,7 +500,7 @@ class _StockItemRowState extends State<StockItemRow> {
           // ------------- Main picker -------------
           Expanded(
             flex: 5,
-            child: widget.isInbound
+            child: isInbound
                 ? MedicineSearchField(
               initial: d.medicine,
               hintText: AppLocalizations.of(context)!.medicine,
@@ -508,14 +509,15 @@ class _StockItemRowState extends State<StockItemRow> {
                 : BatchPickerField(
               initial: d.batchOption,
               hintText: AppLocalizations.of(context)!.medicine,
+              includeExpired: includeExpired,   // ← the key fix
               onSelected: (b) => setState(() => d.batchOption = b),
             ),
           ),
           const SizedBox(width: 8),
 
           // ------------- Inbound extras -------------
-          if (widget.isInbound) ...[
-            // Expiry — using your GenericDatePicker (single-line variant)
+          if (isInbound) ...[
+            // Expiry
             SizedBox(
               width: 150,
               child: GenericDatePicker(
@@ -539,6 +541,7 @@ class _StockItemRowState extends State<StockItemRow> {
               ),
             ),
             const SizedBox(width: 8),
+
             // Batch no
             SizedBox(
               width: 110,
@@ -548,12 +551,10 @@ class _StockItemRowState extends State<StockItemRow> {
               ),
             ),
             const SizedBox(width: 8),
-
-
           ],
 
           // ------------- Adjustment add/deduct -------------
-          if (widget.isAdjustment) ...[
+          if (isAdjustment) ...[
             SizedBox(
               height: 40,
               child: SegmentedButton<bool>(
@@ -630,7 +631,7 @@ class _StockItemRowState extends State<StockItemRow> {
   }
 
   // -----------------------------------------------------------------
-  // Shared input decoration — radius 3, no underline
+  // Shared input decoration — radius 3
   // -----------------------------------------------------------------
   InputDecoration _dec(ColorScheme scheme, String label) {
     return InputDecoration(

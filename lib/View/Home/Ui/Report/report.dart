@@ -3,6 +3,7 @@ import 'package:zpharmacy/Features/Widgets/znavigator.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/MedicineReport/medicine_report_view.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/stoc_card_view.dart';
 import 'AntibioticReport/antibiotic_report.dart';
+import 'MedBatchReport/med_batch_report.dart';
 import 'TallySheet/tally_sheet.dart';
 
 class ReportView extends StatelessWidget {
@@ -131,6 +132,20 @@ class ReportView extends StatelessWidget {
               onTap: () => ZNavigator.goto(
                 context: context,
                 const AntibioticReportView(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            _ReportCard(
+              icon: Icons.warning_amber_rounded,
+              title: 'Expiry Alert',
+              description:
+              'Active batches approaching expiry, sorted by urgency. '
+                  'Highlights items to prescribe or donate before the 3/6-month deadline.',
+              accent: scheme.error,
+              bg: scheme.errorContainer,
+              onTap: () => ZNavigator.goto(
+                context: context,
+                const ExpiryAlertView(),
               ),
             ),
           ],

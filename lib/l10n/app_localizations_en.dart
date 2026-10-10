@@ -187,4 +187,10 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get systemSettings => 'System';
+
+  @override
+  String get am => 'AM';
+
+  @override
+  String get pm => 'PM';
 }

@@ -64,5 +64,7 @@
   "qty": "Qty",
   "prescriptions": "Prescriptions",
   "noPrescriptionToday": "No prescription for today",
-  "systemSettings": "System"
+  "systemSettings": "System",
+  "am": "AM",
+  "pm": "PM"
 }

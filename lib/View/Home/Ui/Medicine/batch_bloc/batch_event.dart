@@ -7,16 +7,15 @@ sealed class BatchEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Load active batches, optionally filtered by search text.
 final class BatchLoadRequested extends BatchEvent {
   final String? search;
-  const BatchLoadRequested({this.search});
+  final bool includeExpired;
+
+  const BatchLoadRequested({
+    this.search,
+    this.includeExpired = false,
+  });
 
   @override
-  List<Object?> get props => [search];
-}
-
-/// Reset back to initial (used when a picker closes).
-final class BatchClear extends BatchEvent {
-  const BatchClear();
+  List<Object?> get props => [search, includeExpired];
 }

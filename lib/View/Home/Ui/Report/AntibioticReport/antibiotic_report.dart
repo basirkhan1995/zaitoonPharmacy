@@ -4,7 +4,9 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Date/z_range_picker.dart';
+import 'package:zpharmacy/Features/Widgets/toast.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
+
 import '../../../../../Features/Widgets/shimmer.dart';
 import 'bloc/antibiotic_report_bloc.dart';
 import 'model/antibiotic_model.dart';
@@ -32,8 +34,9 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
   void initState() {
     super.initState();
 
+    // Default: last 30 days
     final now   = DateTime.now();
-    final start = DateTime(now.year, now.month, 1);
+    final start = now.subtract(const Duration(days: 30));
     _pickerStart = _fmt(start);
     _pickerEnd   = _fmt(now);
     _from        = _pickerStart;
@@ -62,6 +65,51 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
     _reload();
   }
 
+  // ── Quick range ──────────────────────────────────────────────
+  void _setQuickRange(String key) {
+    final now = DateTime.now();
+    DateTime start;
+    DateTime end;
+
+    switch (key) {
+      case 'all':
+        start = DateTime(2020, 1, 1);
+        end   = now;
+        break;
+      case 'last7':
+        start = now.subtract(const Duration(days: 7));
+        end   = now;
+        break;
+      case 'last30':
+        start = now.subtract(const Duration(days: 30));
+        end   = now;
+        break;
+      default:
+        return;
+    }
+
+    setState(() {
+      _pickerStart = _fmt(start);
+      _pickerEnd   = _fmt(end);
+      _from        = _pickerStart;
+      _to          = _pickerEnd;
+    });
+    _reload();
+  }
+
+  String? _activeQuickRange() {
+    final now     = DateTime.now();
+    final nowStr  = _fmt(now);
+    final last7   = _fmt(now.subtract(const Duration(days: 7)));
+    final last30  = _fmt(now.subtract(const Duration(days: 30)));
+
+    if (_from == last7  && _to == nowStr) return 'last7';
+    if (_from == last30 && _to == nowStr) return 'last30';
+    if (_from == '2020-01-01' && _to == nowStr) return 'all';
+    return null;
+  }
+
+  // ── Export ───────────────────────────────────────────────────
   void _onExport() {
     if (_from.isEmpty || _to.isEmpty) return;
     context.read<AntibioticReportBloc>().add(
@@ -78,17 +126,19 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
     if (result == null || !mounted) return;
 
     final path = result.toFilePath();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Saved to $path'),
-        duration: const Duration(seconds: 3),
-      ),
+
+    ToastManager.show(
+      context: context,
+      title: 'Export Success',
+      message: 'Saved to $path',
+      type: ToastType.info,
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final activeQuick = _activeQuickRange();
 
     return BlocListener<AntibioticReportBloc, AntibioticReportState>(
       listener: (context, state) {
@@ -102,11 +152,11 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
           _saveExportedFile(state);
         }
         if (state is AntibioticReportExportFailed) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Export failed: ${state.message}'),
-              backgroundColor: scheme.error,
-            ),
+          ToastManager.show(
+            context: context,
+            title: 'Export Failed',
+            message: state.message,
+            type: ToastType.error,
           );
         }
       },
@@ -131,14 +181,51 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
         ),
         body: Column(
           children: [
-            // ── FILTER BAR
+            // =====================================================
+            // FILTER BAR
+            // =====================================================
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  const Expanded(flex: 6, child: SizedBox()),
+                  // Quick chips
                   Expanded(
-                    flex: 2,
+                    flex: 6,
+                    child: Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        _QuickChip(
+                          label: 'All time',
+                          icon: Icons.all_inclusive,
+                          selected: activeQuick == 'all',
+                          onTap: () => _setQuickRange('all'),
+                          scheme: scheme,
+                        ),
+                        _QuickChip(
+                          label: 'Last 7 days',
+                          icon: Icons.calendar_view_week_outlined,
+                          selected: activeQuick == 'last7',
+                          onTap: () => _setQuickRange('last7'),
+                          scheme: scheme,
+                        ),
+                        _QuickChip(
+                          label: 'Last 30 days',
+                          icon: Icons.calendar_view_month_outlined,
+                          selected: activeQuick == 'last30',
+                          onTap: () => _setQuickRange('last30'),
+                          scheme: scheme,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // Date range picker
+                  Expanded(
+                    flex: 4,
                     child: ZRangeDatePicker(
                       height: 43,
                       label: 'Date range',
@@ -164,7 +251,9 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
 
             const SizedBox(height: 4),
 
-            // ── REPORT
+            // =====================================================
+            // REPORT
+            // =====================================================
             Expanded(
               child: BlocBuilder<AntibioticReportBloc, AntibioticReportState>(
                 builder: (context, state) {
@@ -191,11 +280,11 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
                   }
 
                   final report = switch (state) {
-                    AntibioticReportLoaded s          => s.report,
-                    AntibioticReportExporting s       => s.report,
-                    AntibioticReportExported s        => s.report,
-                    AntibioticReportExportFailed s    => s.report,
-                    _                                 => null,
+                    AntibioticReportLoaded s        => s.report,
+                    AntibioticReportExporting s     => s.report,
+                    AntibioticReportExported s      => s.report,
+                    AntibioticReportExportFailed s  => s.report,
+                    _                               => null,
                   };
 
                   if (report != null) {
@@ -213,6 +302,69 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
 }
 
 // =====================================================================
+// Quick date-range chip
+// =====================================================================
+class _QuickChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final VoidCallback onTap;
+  final ColorScheme scheme;
+
+  const _QuickChip({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.onTap,
+    required this.scheme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final bg = selected
+        ? scheme.secondaryContainer
+        : scheme.surfaceContainerLow;
+    final fg = selected
+        ? scheme.onSecondaryContainer
+        : scheme.onSurfaceVariant;
+    final border = selected
+        ? scheme.secondary.withValues(alpha: 0.4)
+        : scheme.outline.withValues(alpha: 0.25);
+
+    return Material(
+      color: bg,
+      borderRadius: BorderRadius.circular(20),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: border),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 14, color: fg),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.w600,
+                  color: fg,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// =====================================================================
 // Report body
 // =====================================================================
 class _ReportBody extends StatelessWidget {
@@ -223,6 +375,7 @@ class _ReportBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final t = report.totals;
+    final polyOverLimit = t.polypharmacyPercent > 3;
 
     return Column(
       children: [
@@ -266,24 +419,29 @@ class _ReportBody extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _pill(scheme, 'Total Meds', '${t.totalMedicines}',
+                    _pill(scheme, 'Rx', '${t.totalPrescriptions}',
                         scheme.surfaceContainerHighest,
                         scheme.onSurfaceVariant),
                     const SizedBox(height: 4),
                     _pill(
                       scheme,
                       'Antibiotics',
-                      '${t.antibioticCount}  (${t.antibioticPercent.toStringAsFixed(1)}%)',
+                      '${t.antibioticItems}  (${t.antibioticPercent.toStringAsFixed(1)}%)',
                       scheme.primaryContainer,
                       scheme.onPrimaryContainer,
                     ),
                     const SizedBox(height: 4),
                     _pill(
                       scheme,
-                      'Polypharmacy',
-                      '${t.polypharmacyCount}  (${t.polypharmacyPercent.toStringAsFixed(1)}%)',
-                      scheme.errorContainer,
-                      scheme.onErrorContainer,
+                      'Poly/Rx',
+                      '${t.polypharmacyPercent.toStringAsFixed(2)}%  '
+                          '${polyOverLimit ? "· OVER 3%!" : "· OK"}',
+                      polyOverLimit
+                          ? scheme.errorContainer
+                          : scheme.secondaryContainer,
+                      polyOverLimit
+                          ? scheme.onErrorContainer
+                          : scheme.onSecondaryContainer,
                     ),
                   ],
                 ),
@@ -357,11 +515,12 @@ class _TableHeader extends StatelessWidget {
       child: Row(
         children: [
           _h('#', 40, align: TextAlign.center),
-          _h('Date', 110),
-          _h('Total Meds', null, flex: 2, align: TextAlign.center),
-          _h('Antibiotics', null, flex: 2, align: TextAlign.center),
+          _h('Date', 100),
+          _h('Rx', null, flex: 2, align: TextAlign.center),
+          _h('Items', null, flex: 2, align: TextAlign.center),
+          _h('Medicines', null, flex: 2, align: TextAlign.center),
+          _h('Abx Items', null, flex: 2, align: TextAlign.center),
           _h('Abx %', null, flex: 2, align: TextAlign.center),
-          _h('Polypharmacy', null, flex: 2, align: TextAlign.center),
           _h('Poly %', null, flex: 2, align: TextAlign.center),
         ],
       ),
@@ -404,6 +563,8 @@ class _RowTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final polyOverLimit = row.polypharmacyPercent > 3;
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       margin: const EdgeInsets.symmetric(horizontal: 18),
@@ -427,12 +588,34 @@ class _RowTile extends StatelessWidget {
             ),
           ),
           SizedBox(
-            width: 110,
+            width: 100,
             child: Text(
               row.date,
               style: const TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${row.totalPrescriptions}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${row.totalItems}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -450,7 +633,7 @@ class _RowTile extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              '${row.antibioticCount}',
+              '${row.antibioticItems}',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
@@ -473,25 +656,27 @@ class _RowTile extends StatelessWidget {
           ),
           Expanded(
             flex: 2,
-            child: Text(
-              '${row.polypharmacyCount}',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w700,
-                color: scheme.error,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              '${row.polypharmacyPercent.toStringAsFixed(1)}%',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: scheme.error,
+            child: Container(
+              alignment: Alignment.center,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: polyOverLimit
+                      ? scheme.errorContainer
+                      : scheme.secondaryContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${row.polypharmacyPercent.toStringAsFixed(2)}%',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: polyOverLimit
+                        ? scheme.onErrorContainer
+                        : scheme.onSecondaryContainer,
+                  ),
+                ),
               ),
             ),
           ),

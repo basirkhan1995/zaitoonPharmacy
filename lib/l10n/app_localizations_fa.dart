@@ -187,4 +187,10 @@ class AppLocalizationsFa extends AppLocalizations {
 
   @override
   String get systemSettings => 'سیستم';
+
+  @override
+  String get am => 'ق.ظ';
+
+  @override
+  String get pm => 'ب.ظ';
 }

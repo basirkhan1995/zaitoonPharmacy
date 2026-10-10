@@ -2,10 +2,13 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:zpharmacy/View/Auth/auth_model.dart';
+import '../View/Home/Ui/Dashboard/model/stats_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
 import '../View/Home/Ui/Report/AntibioticReport/model/antibiotic_model.dart';
+import '../View/Home/Ui/Report/ExpiryNotification/model/expiry_notify_model.dart';
+import '../View/Home/Ui/Report/MedBatchReport/model/med_batch_model.dart';
 import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
 import '../View/Home/Ui/Report/TallySheet/model/tally_sheet_model.dart';
@@ -272,11 +275,19 @@ Future<void> deleteCategory(int catId) async {
     await _api.delete('/api/stock/$id');
   }
 
-  Future<List<StockBatchOption>> getActiveBatches({String? search}) async {
+  Future<List<StockBatchOption>> getActiveBatches({
+    String? search,
+    bool includeExpired = false,
+  }) async {
+    final qp = <String, dynamic>{};
+    if (search != null && search.isNotEmpty) qp['search'] = search;
+    if (includeExpired) qp['includeExpired'] = 'true';
+
     final data = await _api.get(
       '/api/stock/batches/all',
-      queryParams: (search != null && search.isNotEmpty) ? {'search': search} : null,
+      queryParams: qp.isEmpty ? null : qp,
     );
+
     return (data as List)
         .map((e) => StockBatchOption(
       batchId:          (e['batch_id'] as num).toInt(),
@@ -513,5 +524,48 @@ Future<void> deleteCategory(int catId) async {
     await _api.delete('/api/staff/$staffId');
   }
 
+  Future<ExpiryAlertReport> getExpiryAlert({
+    String? from,
+    String? to,
+    bool onlyExpiring = true,
+  }) async {
+    final qp = <String, dynamic>{
+      'onlyExpiring': onlyExpiring ? 'true' : 'false',
+    };
+    if (from != null && from.isNotEmpty) qp['from'] = from;
+    if (to   != null && to.isNotEmpty)   qp['to']   = to;
 
+    final data = await _api.get(
+      '/api/reports/expiry-alert',
+      queryParams: qp,
+    );
+    return ExpiryAlertReport.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<List<int>> exportExpiryAlertExcel({
+    String? from,
+    String? to,
+    bool onlyExpiring = true,
+  }) async {
+    final qp = <String, dynamic>{
+      'onlyExpiring': onlyExpiring ? 'true' : 'false',
+    };
+    if (from != null && from.isNotEmpty) qp['from'] = from;
+    if (to   != null && to.isNotEmpty)   qp['to']   = to;
+
+    return _api.downloadFile(
+      '/api/reports/expiry-alert/export',
+      queryParams: qp,
+    );
+  }
+
+  Future<ExpirySummary> getExpirySummary() async {
+    final data = await _api.get('/api/reports/expiry-summary');
+    return ExpirySummary.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<DashboardStats> getDashboardStats() async {
+    final data = await _api.get('/api/dashboard/stats');
+    return DashboardStats.fromJson(data as Map<String, dynamic>);
+  }
 }

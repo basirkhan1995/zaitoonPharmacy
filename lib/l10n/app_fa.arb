@@ -64,5 +64,7 @@
   "qty": "تعداد",
   "prescriptions": "نسخه ها",
   "noPrescriptionToday": "نسخه یافت نشد",
-  "systemSettings": "سیستم"
+  "systemSettings": "سیستم",
+  "am": "ق.ظ",
+  "pm": "ب.ظ"
 }

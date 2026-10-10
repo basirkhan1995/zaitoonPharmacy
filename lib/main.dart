@@ -2,10 +2,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Services/repository.dart';
 import 'package:zpharmacy/View/Auth/auth.dart';
 import 'package:zpharmacy/View/Auth/bloc/auth_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Dashboard/bloc/dashboard_stats_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Medicine/batch_bloc/batch_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Organization/bloc/organization_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/bloc/prescription_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/AntibioticReport/bloc/antibiotic_report_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Report/ExpiryNotification/bloc/expiry_notify_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Report/MedBatchReport/bloc/expiry_alert_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/bloc/stock_card_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/TallySheet/bloc/tally_sheet_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
@@ -54,6 +57,9 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => AntibioticReportBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => UsersBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => StaffBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => ExpiryAlertBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => ExpiryNotifyBloc(Repositories(ApiServices()))..add(ExpiryNotifyLoadRequested())),
+        BlocProvider(create: (context) => DashboardStatsBloc(Repositories(ApiServices()))..add(DashboardStatsLoadRequested())),
       ],
       child: BlocBuilder<LocalizationBloc, Locale>(
         builder: (context, locale) {

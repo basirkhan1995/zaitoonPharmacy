@@ -15,6 +15,10 @@ class BatchPickerField extends StatefulWidget {
   /// Placeholder text.
   final String hintText;
 
+  /// Include batches whose expiry has already passed.
+  /// Used for EXPIRED / DAMAGE movements (write-off).
+  final bool includeExpired;
+
   /// Disable interaction.
   final bool enabled;
 
@@ -25,6 +29,7 @@ class BatchPickerField extends StatefulWidget {
     super.key,
     this.initial,
     required this.onSelected,
+    this.includeExpired = false,
     this.label,
     this.hintText = 'Search batch…',
     this.enabled = true,
@@ -77,12 +82,25 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
   }
 
   // -----------------------------------------------------------------
+  // Helpers
+  // -----------------------------------------------------------------
+  bool _isExpired(StockBatchOption b) {
+    final d = DateTime.tryParse(b.expiryDate);
+    if (d == null) return false;
+    final today = DateTime.now();
+    final todayStart = DateTime(today.year, today.month, today.day);
+    return d.isBefore(todayStart);
+  }
+
+  // -----------------------------------------------------------------
   // Focus
   // -----------------------------------------------------------------
   void _onFocusChange() {
     if (_focusNode.hasFocus) {
       _showOverlay();
-      context.read<BatchBloc>().add(const BatchLoadRequested());
+      context.read<BatchBloc>().add(BatchLoadRequested(
+        includeExpired: widget.includeExpired,
+      ));
     } else {
       Future.delayed(const Duration(milliseconds: 150), () {
         if (mounted && !_focusNode.hasFocus) _removeOverlay();
@@ -109,9 +127,10 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
 
     _debounce = Timer(const Duration(milliseconds: 350), () {
       if (!mounted) return;
-      context.read<BatchBloc>().add(
-        BatchLoadRequested(search: value.trim()),
-      );
+      context.read<BatchBloc>().add(BatchLoadRequested(
+        search: value.trim(),
+        includeExpired: widget.includeExpired,
+      ));
     });
   }
 
@@ -287,10 +306,11 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
   }
 
   // -----------------------------------------------------------------
-  // Header strip shown at the top of the overlay
+  // Header strip
   // -----------------------------------------------------------------
   Widget _buildSearchHeader(ColorScheme scheme) {
     final hasQuery = _query.isNotEmpty;
+    final expiredCount = _items.where(_isExpired).length;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -308,7 +328,6 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
           Icon(Icons.qr_code_2_outlined, size: 16, color: scheme.tertiary),
           const SizedBox(width: 8),
 
-          // Search hint / current query
           Expanded(
             child: RichText(
               overflow: TextOverflow.ellipsis,
@@ -335,6 +354,35 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
               ),
             ),
           ),
+
+          // Expired count badge (only when applicable)
+          if (!_loading && expiredCount > 0) ...[
+            Container(
+              padding:
+              const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.warning_amber_rounded,
+                      size: 12, color: scheme.onErrorContainer),
+                  const SizedBox(width: 4),
+                  Text(
+                    '$expiredCount expired',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: scheme.onErrorContainer,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 6),
+          ],
 
           // Match count
           if (!_loading && _items.isNotEmpty)
@@ -388,27 +436,25 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
         alignment: Alignment.center,
         child: ConstrainedBox(
           constraints: BoxConstraints(
-            maxWidth: 900,                       // ← wider overlay
+            maxWidth: 900,
             maxHeight: screen.height * 0.7,
             minHeight: 240,
           ),
           child: Material(
-            elevation: 2,                        // ← subtle elevation
-            borderRadius: BorderRadius.circular(8),   // ← 8 radius
+            elevation: 2,
+            borderRadius: BorderRadius.circular(8),
             color: scheme.surface,
             clipBehavior: Clip.antiAlias,
             child: Column(
               children: [
-                // -------- Search header --------
                 _buildSearchHeader(scheme),
 
-                // -------- Body --------
                 Expanded(
                   child: _loading
                       ? const Padding(
                     padding: EdgeInsets.all(24),
-                    child:
-                    Center(child: CircularProgressIndicator()),
+                    child: Center(
+                        child: CircularProgressIndicator()),
                   )
                       : _items.isEmpty
                       ? Padding(
@@ -447,6 +493,7 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                           itemBuilder: (_, i) {
                             final b = _items[i];
                             final isHl = i == _highlighted;
+                            final expired = _isExpired(b);
 
                             return InkWell(
                               onTap: () => _select(b),
@@ -468,21 +515,50 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                                       : Colors.transparent,
                                   border: Border(
                                     bottom: BorderSide(
-                                      color: scheme
-                                          .outlineVariant
+                                      color: scheme.outlineVariant
                                           .withValues(alpha: 0.4),
                                       width: 0.5,
                                     ),
                                     left: isHl
                                         ? BorderSide(
-                                        color: scheme
-                                            .tertiary,
+                                        color: scheme.tertiary,
                                         width: 3)
                                         : BorderSide.none,
                                   ),
                                 ),
                                 child: Row(
                                   children: [
+                                    // Leading icon — red box for expired
+                                    Container(
+                                      width: 34,
+                                      height: 34,
+                                      decoration: BoxDecoration(
+                                        color: expired
+                                            ? scheme.errorContainer
+                                            : scheme
+                                            .tertiaryContainer,
+                                        borderRadius:
+                                        BorderRadius.circular(
+                                            8),
+                                      ),
+                                      alignment: Alignment.center,
+                                      child: Icon(
+                                        expired
+                                            ? Icons
+                                            .error_outline_rounded
+                                            : Icons
+                                            .qr_code_2_outlined,
+                                        size: 18,
+                                        color: expired
+                                            ? scheme
+                                            .onErrorContainer
+                                            : scheme
+                                            .onTertiaryContainer,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+
+                                    // Middle — name + meta
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
@@ -495,30 +571,82 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                                             overflow:
                                             TextOverflow
                                                 .ellipsis,
-                                            style: const TextStyle(
+                                            style:
+                                            const TextStyle(
                                               fontWeight:
-                                              FontWeight
-                                                  .w600,
+                                              FontWeight.w600,
                                               fontSize: 14.5,
                                             ),
                                           ),
-                                          const SizedBox(
-                                              height: 2),
-                                          Text(
-                                            'Batch ${b.batchNo}  ·  EXP ${b.expiryDate}',
-                                            maxLines: 1,
-                                            overflow:
-                                            TextOverflow
-                                                .ellipsis,
-                                            style: TextStyle(
-                                              fontSize: 11.5,
-                                              color: scheme
-                                                  .onSurfaceVariant,
-                                            ),
+                                          const SizedBox(height: 2),
+                                          Row(
+                                            children: [
+                                              Flexible(
+                                                child: Text(
+                                                  'Batch ${b.batchNo}  ·  EXP ${b.expiryDate}',
+                                                  maxLines: 1,
+                                                  overflow:
+                                                  TextOverflow
+                                                      .ellipsis,
+                                                  style: TextStyle(
+                                                    fontSize: 11.5,
+                                                    color: expired
+                                                        ? scheme
+                                                        .error
+                                                        : scheme
+                                                        .onSurfaceVariant,
+                                                    fontWeight:
+                                                    expired
+                                                        ? FontWeight
+                                                        .w700
+                                                        : FontWeight
+                                                        .w400,
+                                                  ),
+                                                ),
+                                              ),
+                                              if (expired) ...[
+                                                const SizedBox(
+                                                    width: 6),
+                                                Container(
+                                                  padding:
+                                                  const EdgeInsets
+                                                      .symmetric(
+                                                      horizontal:
+                                                      5,
+                                                      vertical:
+                                                      1),
+                                                  decoration:
+                                                  BoxDecoration(
+                                                    color: scheme
+                                                        .errorContainer,
+                                                    borderRadius:
+                                                    BorderRadius
+                                                        .circular(
+                                                        4),
+                                                  ),
+                                                  child: Text(
+                                                    'EXPIRED',
+                                                    style:
+                                                    TextStyle(
+                                                      fontSize: 9,
+                                                      fontWeight:
+                                                      FontWeight
+                                                          .w800,
+                                                      letterSpacing:
+                                                      0.4,
+                                                      color: scheme
+                                                          .onErrorContainer,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ],
+                                            ],
                                           ),
                                         ],
                                       ),
                                     ),
+
+                                    // Trailing — quantity
                                     Container(
                                       padding:
                                       const EdgeInsets
@@ -530,11 +658,10 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                                             0
                                             ? scheme
                                             .secondaryContainer
-                                            : scheme
-                                            .errorContainer,
+                                            : scheme.errorContainer,
                                         borderRadius:
-                                        BorderRadius
-                                            .circular(8),
+                                        BorderRadius.circular(
+                                            8),
                                       ),
                                       child: Text(
                                         '${b.quantityRemaining}',
@@ -607,6 +734,7 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
 
   Widget _detailsPanel(StockBatchOption b) {
     final scheme = Theme.of(context).colorScheme;
+    final expired = _isExpired(b);
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -619,14 +747,20 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: scheme.tertiaryContainer,
+                  color: expired
+                      ? scheme.errorContainer
+                      : scheme.tertiaryContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 alignment: Alignment.center,
                 child: Icon(
-                  Icons.medical_information_outlined,
-                  size: 33,
-                  color: scheme.onTertiaryContainer,
+                  expired
+                      ? Icons.warning_amber_rounded
+                      : Icons.medical_information_outlined,
+                  size: 28,
+                  color: expired
+                      ? scheme.onErrorContainer
+                      : scheme.onTertiaryContainer,
                 ),
               ),
               const SizedBox(width: 12),
@@ -656,9 +790,47 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
               ),
             ],
           ),
+
+          if (expired) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: scheme.errorContainer.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(
+                  color: scheme.error.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline_rounded,
+                      size: 16, color: scheme.error),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'This batch has expired — safe to write off',
+                      style: TextStyle(
+                        fontSize: 11.5,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onErrorContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+
           const SizedBox(height: 16),
           _detailRow(Icons.tag_outlined, 'Batch no', b.batchNo),
-          _detailRow(Icons.event_busy_outlined, 'Expiry', b.expiryDate),
+          _detailRow(
+            Icons.event_busy_outlined,
+            'Expiry',
+            b.expiryDate,
+            valueColor: expired ? scheme.error : null,
+          ),
           if (b.dosage != null && b.dosage!.isNotEmpty)
             _detailRow(Icons.science_outlined, 'Dosage', b.dosage!),
           if (b.unit != null && b.unit!.isNotEmpty)
@@ -724,7 +896,12 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
     );
   }
 
-  Widget _detailRow(IconData icon, String label, String value) {
+  Widget _detailRow(
+      IconData icon,
+      String label,
+      String value, {
+        Color? valueColor,
+      }) {
     final scheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -746,9 +923,10 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
           Expanded(
             child: Text(
               value,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
+                color: valueColor,
               ),
             ),
           ),
@@ -814,8 +992,7 @@ class _BatchPickerFieldState extends State<BatchPickerField> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(4),
-                  borderSide:
-                  BorderSide(color: scheme.primary, width: 1.2),
+                  borderSide: BorderSide(color: scheme.primary, width: 1.2),
                 ),
               ),
             ),
