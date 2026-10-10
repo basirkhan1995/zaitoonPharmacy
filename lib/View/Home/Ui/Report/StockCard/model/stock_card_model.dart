@@ -122,9 +122,7 @@ class StockCardRow {
     balance:     (json['balance'] as num?)?.toInt() ?? 0,
     batchId:     json['batch_id'] == null ? null : (json['batch_id'] as num).toInt(),
     batchNo:     json['batch_no'] as String?,
-    expiryDate:  json['expiry_date'] == null
-        ? null
-        : _dateOnly(json['expiry_date']),
+    expiryDate:  json['expiry_date'] == null ? null : _dateOnly(json['expiry_date']),
     orgName:     json['org_name'] as String?,
     receiver:    json['receiver'] as String?,
     reference:   json['reference'] as String?,

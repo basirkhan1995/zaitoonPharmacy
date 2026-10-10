@@ -135,7 +135,7 @@ class _ZRangeDatePickerState extends State<ZRangeDatePicker> {
         if (widget.label.isNotEmpty) ...[
           Text(
             widget.label,
-            style: widget.labelStyle ?? Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 12),
+            style: widget.labelStyle ?? Theme.of(context).textTheme.titleSmall?.copyWith(fontSize: 12,color: Theme.of(context).colorScheme.outline),
           ),
           const SizedBox(height: 3),
         ],

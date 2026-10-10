@@ -30,6 +30,7 @@ class AntibioticReportBloc
       ) async {
     emit(const AntibioticReportLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final report = await _repo.getAntibioticReport(
         from: event.from,
         to:   event.to,

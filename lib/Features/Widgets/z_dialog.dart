@@ -49,7 +49,7 @@ class _ZFormDialogState extends State<ZFormDialog> {
     return StatefulBuilder(
       builder: (context, setState) {
         return Padding(
-          padding: widget.padding ?? const EdgeInsets.all(15.0),
+          padding: widget.padding ?? const EdgeInsets.all(5.0),
           child: AlertDialog(
             alignment: widget.alignment ?? AlignmentGeometry.center,
             contentPadding: EdgeInsets.zero,

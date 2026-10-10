@@ -22,15 +22,15 @@ class ReportView extends StatelessWidget {
             Row(
               children: [
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
-                    color: scheme.primaryContainer.withValues(alpha: .5),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: .1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    Icons.insert_chart_outlined,
+                    Icons.line_axis_rounded,
                     size: 32,
                     color: scheme.onPrimaryContainer,
                   ),
@@ -92,7 +92,7 @@ class ReportView extends StatelessWidget {
 
             _ReportCard(
               icon: Icons.list_alt_outlined,
-              title: 'Medicines Report',
+              title: 'Medicines Stock',
               description:
               'Summary of all medicines in a date range: '
                   'opening, in, out, closing balance, and sources.',
@@ -180,23 +180,23 @@ class _ReportCardState extends State<_ReportCard> {
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
           color: _hovered
-              ? scheme.surfaceContainer
+              ? scheme.surfaceContainer.withValues(alpha: .08)
               : scheme.surfaceContainerLow,
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: _hovered
                 ? widget.accent.withValues(alpha: 0.4)
                 : scheme.outline.withValues(alpha: 0.2),
-            width: _hovered ? 1.2 : 1,
+            width: _hovered ? 1.4 : 0.8,
           ),
         ),
         child: Material(
           color: Colors.transparent,
           child: InkWell(
             onTap: widget.onTap,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(6),
             child: Padding(
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(8),
               child: Row(
                 children: [
                   // Icon badge
@@ -204,8 +204,9 @@ class _ReportCardState extends State<_ReportCard> {
                     width: 52,
                     height: 52,
                     decoration: BoxDecoration(
-                      color: widget.bg,
-                      borderRadius: BorderRadius.circular(10),
+                      color: widget.bg.withValues(alpha: .4),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: widget.bg,width: 1.3)
                     ),
                     alignment: Alignment.center,
                     child: Icon(
@@ -244,17 +245,20 @@ class _ReportCardState extends State<_ReportCard> {
                   const SizedBox(width: 12),
 
                   // Arrow
-                  AnimatedSlide(
-                    duration: const Duration(milliseconds: 150),
-                    offset: _hovered
-                        ? const Offset(0.15, 0)
-                        : Offset.zero,
-                    child: Icon(
-                      Icons.arrow_forward_ios_outlined,
-                      size: 16,
-                      color: _hovered
-                          ? widget.accent
-                          : scheme.onSurfaceVariant,
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: AnimatedSlide(
+                      duration: const Duration(milliseconds: 150),
+                      offset: _hovered
+                          ? const Offset(0.15, 0)
+                          : Offset.zero,
+                      child: Icon(
+                        Icons.arrow_forward_ios_outlined,
+                        size: 16,
+                        color: _hovered
+                            ? widget.accent
+                            : scheme.onSurfaceVariant,
+                      ),
                     ),
                   ),
                 ],

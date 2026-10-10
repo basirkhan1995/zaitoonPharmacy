@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:zpharmacy/Features/Widgets/cover.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import 'package:zpharmacy/Features/Widgets/znavigator.dart';
 import 'package:zpharmacy/View/Auth/bloc/auth_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Medicine/medicine.dart';
 import 'package:zpharmacy/View/Home/Ui/Organization/organization.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/prescription.dart';
+import 'package:zpharmacy/View/Home/Ui/Staff/staff.dart';
 import 'package:zpharmacy/View/Home/Ui/Stock/stock.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 import '../../Features/Widgets/generic_menu.dart';
@@ -15,9 +17,14 @@ import 'Ui/Report/report.dart';
 import 'Ui/Settings/settings.dart';
 import 'bloc/menu_bloc.dart';
 
-class HomeView extends StatelessWidget {
+class HomeView extends StatefulWidget {
   const HomeView({super.key});
 
+  @override
+  State<HomeView> createState() => _HomeViewState();
+}
+
+class _HomeViewState extends State<HomeView> {
   Future<void> _confirmLogout(BuildContext context) async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -66,7 +73,18 @@ class HomeView extends StatelessWidget {
   }
 
   @override
+  void initState() {
+
+    super.initState();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final authState = context.select((AuthBloc bloc) => bloc.state);
+    if (authState is! AuthAuthenticated) {
+      return const SizedBox();
+    }
+    final login = authState.user;
     final menuItems = [
 
         MenuDefinition(
@@ -102,7 +120,12 @@ class HomeView extends StatelessWidget {
         screen: const OrganizationView(),
         icon: Icons.location_city_outlined,
       ),
-
+      MenuDefinition(
+        value: MenuName.staff,
+        label: "Staff",
+        screen: const StaffView(),
+        icon: Icons.people,
+      ),
         MenuDefinition(
           value: MenuName.settings,
           label: AppLocalizations.of(context)!.settings,
@@ -157,48 +180,88 @@ class HomeView extends StatelessWidget {
         }
       },
       child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Home'),
-          actions: [
-            IconButton(
-              tooltip: 'Logout',
-              icon: const Icon(Icons.logout),
-              onPressed: () => _confirmLogout(context),
+        body: Column(
+          children: [
+            ZCover(
+              margin: EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+              radius: 5,
+              color: Theme.of(context).colorScheme.surface,
+              borderColor: Theme.of(context).colorScheme.primary.withValues(alpha: .2),
+              child: Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(login.orgName,style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: 25,
+                          color: Theme.of(context).colorScheme.primary)),
+                          Text("${login.fullName} | ${login.role}",style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Theme.of(context).colorScheme.outline)),
+                        ],
+                      ),
+                    ),
+
+                    Row(
+                      children: [
+                        Wrap(
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          children: [
+                            Text("Signed in | ${login.username}",style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: Theme.of(context).colorScheme.outline
+                            )),
+                            IconButton(
+                              tooltip: 'Logout',
+                              icon: Icon(Icons.power_settings_new_rounded,color: Theme.of(context).colorScheme.error),
+                              onPressed: () => _confirmLogout(context),
+                            ),
+                          ],
+                        ),
+                      ],
+                    )
+                  ],
+                ),
+              ),
+            ),
+            Expanded(
+              child: GenericMenuWithScreen<MenuName>(
+                key: const Key('main_menu'),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
+                selectedValue: currentTab,
+                onChanged: (val) {
+                  if (currentTab != val) {
+                    context.read<MenuBloc>().add(MenuOnChangedEvent(val));
+                  }
+                },
+                items: menuItems,
+                selectedColor: Theme.of(context).colorScheme.primary.withAlpha(23),
+                selectedTextColor: Theme.of(context).colorScheme.primary.withAlpha(230),
+                unselectedTextColor: Theme.of(context).colorScheme.secondary,
+                menuHeaderBuilder: (isExpanded) {
+                  return BlocConsumer<AuthBloc, AuthState>(
+                    listener: (context, state) {
+
+                    },
+                    builder: (context, state) {
+
+
+                      return Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+
+                        ],
+                      );
+                    },
+                  );
+                },
+
+              ),
             ),
           ],
-        ),
-        body: GenericMenuWithScreen<MenuName>(
-          key: const Key('main_menu'),
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-          margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 5),
-          selectedValue: currentTab,
-          onChanged: (val) {
-            if (currentTab != val) {
-              context.read<MenuBloc>().add(MenuOnChangedEvent(val));
-            }
-          },
-          items: menuItems,
-          selectedColor: Theme.of(context).colorScheme.primary.withAlpha(23),
-          selectedTextColor: Theme.of(context).colorScheme.primary.withAlpha(230),
-          unselectedTextColor: Theme.of(context).colorScheme.secondary,
-          menuHeaderBuilder: (isExpanded) {
-            return BlocConsumer<AuthBloc, AuthState>(
-              listener: (context, state) {
-
-              },
-              builder: (context, state) {
-
-
-                return Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-
-                  ],
-                );
-              },
-            );
-          },
-
         ),
       ),
     );

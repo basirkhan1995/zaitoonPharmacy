@@ -138,7 +138,7 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
                 children: [
                   const Expanded(flex: 6, child: SizedBox()),
                   Expanded(
-                    flex: 4,
+                    flex: 2,
                     child: ZRangeDatePicker(
                       height: 43,
                       label: 'Date range',

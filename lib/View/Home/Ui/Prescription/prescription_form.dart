@@ -247,7 +247,6 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
               title: _isEdit ? 'Edit Prescription' : 'New Prescription',
               icon: Icons.receipt_long_outlined,
               width: MediaQuery.of(context).size.width * .6,
-              padding: const EdgeInsets.all(16),
               isButtonEnabled: !saving,
               onAction: saving ? null : _submit,
               actionLabel: saving
@@ -262,145 +261,149 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                 child: Form(
                   key: _formKey,
                   child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // -------- Patient section --------
-                        _sectionTitle(
-                            context, AppLocalizations.of(context)!.patient),
-                        const SizedBox(height: 8),
+                    child: Padding(
+                      padding: const EdgeInsets.all(10.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // -------- Patient section --------
+                          _sectionTitle(
+                              context, AppLocalizations.of(context)!.patient),
+                          const SizedBox(height: 8),
 
-                        Row(children: [
-                          // ----- Register No (required + autofocus) -----
-                          Expanded(
-                            child: ZTextFieldEntitled(
-                              title: AppLocalizations.of(context)!.regNo,
-                              isRequired: true,
-                              controller: _registerNo,
-                              focusNode: _regFocus,
-                              inputAction: TextInputAction.next,
-                              // Enter → jump to Patient Name
-                              onSubmit: (_) => _nameFocus.requestFocus(),
-                              validator: (v) =>
-                              (v == null || v.trim().isEmpty)
-                                  ? 'Required'
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // ----- Patient Name (required) -----
-                          Expanded(
-                            child: ZTextFieldEntitled(
-                              title: AppLocalizations.of(context)!.patientName,
-                              isRequired: true,
-                              controller: _patientName,
-                              focusNode: _nameFocus,
-                              inputAction: TextInputAction.next,
-                              // Enter → jump to first medicine
-                              onSubmit: (_) => _focusFirstMedicine(),
-                              validator: (v) =>
-                              (v == null || v.trim().isEmpty)
-                                  ? 'Required'
-                                  : null,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // ----- Age (optional) -----
-                          Expanded(
-                            child: ZTextFieldEntitled(
-                              title: AppLocalizations.of(context)!.age,
-                              controller: _age,
-                              inputAction: TextInputAction.next,
-                              validator: (v) {
-                                if (v == null || v.trim().isEmpty) return null;
-                                final n = int.tryParse(v.trim());
-                                if (n == null || n < 0 || n > 150) {
-                                  return '0–150';
-                                }
-                                return null;
-                              },
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-
-                          // ----- Gender -----
-                          Expanded(
-                            child: ZDropdown<String>(
-                              title: 'Gender',
-                              items: const ['Male', 'Female'],
-                              itemLabel: (v) => v,
-                              selectedItem: _gender,
-                              initialValue: 'Select gender',
-                              radius: 4,
-                              height: 40,
-                              onItemSelected: (v) =>
-                                  setState(() => _gender = v),
-                            ),
-                          ),
-                        ]),
-                        const SizedBox(height: 18),
-
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
+                          Row(children: [
+                            // ----- Register No (required + autofocus) -----
                             Expanded(
-                              flex: 2,
                               child: ZTextFieldEntitled(
-                                title: 'Address',
-                                controller: _address,
+                                title: AppLocalizations.of(context)!.regNo,
+                                isRequired: true,
+                                controller: _registerNo,
+                                focusNode: _regFocus,
                                 inputAction: TextInputAction.next,
+                                // Enter → jump to Patient Name
+                                onSubmit: (_) => _nameFocus.requestFocus(),
+                                validator: (v) =>
+                                (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 12),
+
+                            // ----- Patient Name (required) -----
                             Expanded(
-                              flex: 2,
                               child: ZTextFieldEntitled(
-                                title: 'Doctor',
-                                controller: _doctorName,
+                                title: AppLocalizations.of(context)!.patientName,
+                                isRequired: true,
+                                controller: _patientName,
+                                focusNode: _nameFocus,
                                 inputAction: TextInputAction.next,
+                                // Enter → jump to first medicine
+                                onSubmit: (_) => _focusFirstMedicine(),
+                                validator: (v) =>
+                                (v == null || v.trim().isEmpty)
+                                    ? 'Required'
+                                    : null,
                               ),
                             ),
                             const SizedBox(width: 12),
+
+                            // ----- Age (optional) -----
                             Expanded(
-                              flex: 3,
                               child: ZTextFieldEntitled(
-                                title: 'Diagnosis',
-                                controller: _diagnosis,
-                                inputAction: TextInputAction.done,
+                                title: AppLocalizations.of(context)!.age,
+                                controller: _age,
+                                inputAction: TextInputAction.next,
+                                validator: (v) {
+                                  if (v == null || v.trim().isEmpty) return null;
+                                  final n = int.tryParse(v.trim());
+                                  if (n == null || n < 0 || n > 150) {
+                                    return '0–150';
+                                  }
+                                  return null;
+                                },
                               ),
                             ),
-                          ],
-                        ),
+                            const SizedBox(width: 12),
 
-                        const SizedBox(height: 20),
-
-                        // -------- Medicines section --------
-                        Row(children: [
-                          Expanded(child: _sectionTitle(context, 'Medicines')),
-                          TextButton.icon(
-                            onPressed: () => _addItemRow(),
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('Add medicine'),
-                          ),
-                        ]),
-                        const SizedBox(height: 4),
-                        ...List.generate(_drafts.length, (i) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: PrescriptionItemRow(
-                              key: ValueKey(_drafts[i]),
-                              draft: _drafts[i],
-                              index: i + 1,
-                              onRemove: _drafts.length > 1
-                                  ? () => _removeItemRow(i)
-                                  : null,
-                              onSubmitLastField: () => _addItemRow(),
+                            // ----- Gender -----
+                            Expanded(
+                              child: ZDropdown<String>(
+                                title: 'Gender',
+                                items: const ['Male', 'Female'],
+                                itemLabel: (v) => v,
+                                selectedItem: _gender,
+                                initialValue: 'Select gender',
+                                radius: 4,
+                                height: 40,
+                                onItemSelected: (v) =>
+                                    setState(() => _gender = v),
+                              ),
                             ),
-                          );
-                        }),
-                      ],
+                          ]),
+                          const SizedBox(height: 10),
+
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Expanded(
+                                flex: 2,
+                                child: ZTextFieldEntitled(
+                                  title: 'Address',
+                                  controller: _address,
+                                  inputAction: TextInputAction.next,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 2,
+                                child: ZTextFieldEntitled(
+                                  title: 'Doctor',
+                                  controller: _doctorName,
+                                  inputAction: TextInputAction.next,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                flex: 3,
+                                child: ZTextFieldEntitled(
+                                  title: 'Diagnosis',
+                                  controller: _diagnosis,
+                                  inputAction: TextInputAction.done,
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // -------- Medicines section --------
+                          Row(
+                              children: [
+                            Expanded(child: _sectionTitle(context, 'Medicines')),
+                            TextButton.icon(
+                              onPressed: () => _addItemRow(),
+                              icon: const Icon(Icons.add, size: 18),
+                              label: const Text('Add Medicine'),
+                            ),
+                          ]),
+                          const SizedBox(height: 4),
+                          ...List.generate(_drafts.length, (i) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: PrescriptionItemRow(
+                                key: ValueKey(_drafts[i]),
+                                draft: _drafts[i],
+                                index: i + 1,
+                                onRemove: _drafts.length > 1
+                                    ? () => _removeItemRow(i)
+                                    : null,
+                                onSubmitLastField: () => _addItemRow(),
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -476,21 +479,17 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
     final draft = widget.draft;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(8),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           CircleAvatar(
-            radius: 18,
-            backgroundColor: scheme.primaryContainer,
+            radius: 15,
+            backgroundColor: scheme.primaryContainer.withValues(alpha: .5),
             child: Text(
               '${widget.index}',
               style: TextStyle(
-                fontSize: 15,
+                fontSize: 12,
                 fontWeight: FontWeight.w700,
                 color: scheme.onPrimaryContainer,
               ),
@@ -504,7 +503,7 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
               initial: draft.medicine,
               focusNode: draft.medicineFocus,
               nextFocusNode: draft.qtyFocus,
-              hintText: 'Search medicine *',
+              hintText: 'Medicine',
               onSelected: (m) {
                 setState(() => draft.medicine = m);
               },
@@ -520,8 +519,7 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
               keyboardType: TextInputType.number,
               textInputAction: TextInputAction.next,
               onFieldSubmitted: (_) => draft.instructionFocus.requestFocus(),
-              decoration: _fieldDecoration(
-                  scheme, AppLocalizations.of(context)!.qty),
+              decoration: _fieldDecoration(scheme, AppLocalizations.of(context)!.qty),
               validator: (v) {
                 final n = int.tryParse(v?.trim() ?? '');
                 return (n == null || n <= 0) ? '> 0' : null;
@@ -546,7 +544,6 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
           const SizedBox(width: 8),
 
           if (widget.onRemove != null) ...[
-            const SizedBox(width: 6),
             IconButton(
               onPressed: widget.onRemove,
               icon: Icon(Icons.close, size: 18, color: scheme.error),
@@ -560,7 +557,7 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
 
   InputDecoration _fieldDecoration(ColorScheme scheme, String label) {
     final side = BorderSide(
-      color: scheme.outline.withValues(alpha: 0.5),
+      color: scheme.outline.withValues(alpha: 0.3),
       width: 1.2,
     );
     return InputDecoration(
@@ -576,7 +573,7 @@ class _PrescriptionItemRowState extends State<PrescriptionItemRow> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(4),
-        borderSide: BorderSide(color: scheme.primary, width: 1.2),
+        borderSide: BorderSide(color: scheme.primary, width: 1.1),
       ),
     );
   }

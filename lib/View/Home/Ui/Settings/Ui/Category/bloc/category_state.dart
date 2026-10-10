@@ -7,54 +7,46 @@ sealed class CategoryState extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Nothing loaded yet
 final class CategoryInitial extends CategoryState {
   const CategoryInitial();
 }
 
-/// List is loading
 final class CategoryLoading extends CategoryState {
   const CategoryLoading();
 }
 
-/// List loaded (may be empty); optionally one selected
-final class CategoryLoaded extends CategoryState {
+/// Base class for any state that carries the list.
+/// The view only needs to check `state is CategoryWithItems`.
+abstract class CategoryWithItems extends CategoryState {
   final List<Category> items;
-  final Category? selected;
-
-  const CategoryLoaded(this.items, {this.selected});
-
-  CategoryLoaded copyWith({
-    List<Category>? items,
-    Category? selected,
-  }) => CategoryLoaded(
-    items ?? this.items,
-    selected: selected ?? this.selected,
-  );
-
-  @override
-  List<Object?> get props => [items, selected];
-}
-
-/// A create / update / delete is in flight
-final class CategorySaving extends CategoryState {
-  final List<Category> items;
-  const CategorySaving(this.items);
+  const CategoryWithItems(this.items);
 
   @override
   List<Object?> get props => [items];
 }
 
-/// Operation succeeded — one-shot signal for the UI
-final class CategoryActionSuccess extends CategoryState {
-  final String message;
-  const CategoryActionSuccess(this.message);
+final class CategoryLoaded extends CategoryWithItems {
+  final Category? selected;
+
+  const CategoryLoaded(super.items, {this.selected});
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [items, selected];
 }
 
-/// Something failed
+final class CategorySaving extends CategoryWithItems {
+  const CategorySaving(super.items);
+}
+
+final class CategoryActionSuccess extends CategoryWithItems {
+  final String message;
+
+  const CategoryActionSuccess(super.items, this.message);
+
+  @override
+  List<Object?> get props => [items, message];
+}
+
 final class CategoryFailure extends CategoryState {
   final String message;
   const CategoryFailure(this.message);

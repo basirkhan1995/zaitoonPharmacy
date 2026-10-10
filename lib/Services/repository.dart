@@ -10,6 +10,8 @@ import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
 import '../View/Home/Ui/Report/TallySheet/model/tally_sheet_model.dart';
 import '../View/Home/Ui/Settings/Ui/Category/model/med_category_model.dart';
+import '../View/Home/Ui/Settings/Ui/Users/model/users_model.dart';
+import '../View/Home/Ui/Staff/model/staff_model.dart';
 import '../View/Home/Ui/Stock/model/stock_model.dart';
 import 'api_services.dart';
 
@@ -447,6 +449,68 @@ Future<void> deleteCategory(int catId) async {
       '/api/reports/antibiotic-form/export',
       queryParams: {'from': from, 'to': to},
     );
+  }
+
+  // =================================================================
+// USERS
+// =================================================================
+
+  Future<List<UserAccount>> getUsers() async {
+    final data = await _api.get('/api/users');
+    return (data as List)
+        .map((e) => UserAccount.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<UserAccount> getUser(int userId) async {
+    final data = await _api.get('/api/users/$userId');
+    return UserAccount.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<UserAccount> createUser(UserAccountRequest req) async {
+    final data = await _api.post('/api/users', data: req.toJson());
+    final id = (data['user_id'] as num).toInt();
+    return getUser(id);
+  }
+
+  Future<UserAccount> updateUser(int userId, UserAccountRequest req) async {
+    await _api.put('/api/users/$userId', data: req.toJson());
+    return getUser(userId);
+  }
+
+  Future<void> deleteUser(int userId) async {
+    await _api.delete('/api/users/$userId');
+  }
+
+  // =================================================================
+// STAFF
+// =================================================================
+
+  Future<List<Staff>> getStaffList() async {
+    final data = await _api.get('/api/staff');
+    return (data as List)
+        .map((e) => Staff.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<Staff> getStaff(int staffId) async {
+    final data = await _api.get('/api/staff/$staffId');
+    return Staff.fromJson(data as Map<String, dynamic>);
+  }
+
+  Future<Staff> createStaff(StaffRequest req) async {
+    final data = await _api.post('/api/staff', data: req.toJson());
+    final id = (data['staff_id'] as num).toInt();
+    return getStaff(id);
+  }
+
+  Future<Staff> updateStaff(int staffId, StaffRequest req) async {
+    await _api.put('/api/staff/$staffId', data: req.toJson());
+    return getStaff(staffId);
+  }
+
+  Future<void> deleteStaff(int staffId) async {
+    await _api.delete('/api/staff/$staffId');
   }
 
 

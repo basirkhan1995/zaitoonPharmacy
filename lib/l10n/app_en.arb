@@ -63,5 +63,6 @@
   "instruction": "Instruction",
   "qty": "Qty",
   "prescriptions": "Prescriptions",
-  "noPrescriptionToday": "No prescription for today"
+  "noPrescriptionToday": "No prescription for today",
+  "systemSettings": "System"
 }

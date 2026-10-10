@@ -157,6 +157,7 @@ class _StockCardViewState extends State<StockCardView> {
       },
       child: Scaffold(
         appBar: AppBar(
+          titleSpacing: 0,
           title: const Text('Stock Card'),
           actionsPadding: const EdgeInsets.all(10),
           actions: [
@@ -167,6 +168,7 @@ class _StockCardViewState extends State<StockCardView> {
             ),
             const SizedBox(width: 8),
             ZOutlineButton(
+              backgroundHover: Theme.of(context).colorScheme.secondary,
               onPressed: (_medicine == null || _isExporting)
                   ? null
                   : _onExport,
@@ -202,7 +204,7 @@ class _StockCardViewState extends State<StockCardView> {
                   Expanded(
                     flex: 3,
                     child: ZRangeDatePicker(
-                      height: 43,
+                      height: 40,
                       label: 'Date range',
                       initialStartDate: DateTime.tryParse(_pickerStart),
                       initialEndDate: DateTime.tryParse(_pickerEnd),
@@ -238,7 +240,7 @@ class _StockCardViewState extends State<StockCardView> {
                           onSubmitted: (_) => _reload(),
                           onChanged: (_) => setState(() {}),
                           decoration: InputDecoration(
-                            hintText: 'e.g. AMX-01',
+                            hintText: 'RQ980',
                             isDense: true,
                             contentPadding: const EdgeInsets.symmetric(
                                 vertical: 12, horizontal: 12),
@@ -720,11 +722,11 @@ class _RowTile extends StatelessWidget {
                 ),
                 if (row.expiryDate != null && row.expiryDate!.isNotEmpty)
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Icon(
-                        Icons.event_busy_outlined,
-                        size: 10,
-                        color: scheme.onSurfaceVariant,
+                      Text(
+                        "EXP",
+                        style: TextStyle(fontSize: 10,color: Theme.of(context).colorScheme.error, fontWeight: FontWeight.w500),
                       ),
                       const SizedBox(width: 3),
                       Text(

@@ -688,7 +688,7 @@ class _MedicineSearchFieldState extends State<MedicineSearchField> {
               children: [
                 Icon(
                   m.availableStock > 0
-                      ? Icons.inventory_2_outlined
+                      ? Icons.medical_information_outlined
                       : Icons.block_outlined,
                   color: m.availableStock > 0
                       ? scheme.onSecondaryContainer

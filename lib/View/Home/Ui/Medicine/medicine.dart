@@ -6,9 +6,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/toast.dart';
 import 'package:zpharmacy/Features/Widgets/zbutton.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
-
 import '../../../../Features/Widgets/shimmer.dart';
-import '../Settings/Ui/Category/bloc/category_bloc.dart';
 import 'add_edit_med.dart';
 import 'bloc/medicine_bloc.dart';
 import 'model/medicine_model.dart';
@@ -301,19 +299,10 @@ class _MedicineViewState extends State<MedicineView> {
   // Add / Edit
   // ===================================================================
   Future<void> _openAddEdit({Medicine? medicine}) async {
-    final medicineBloc = context.read<MedicineBloc>();
-    final categoryBloc = context.read<CategoryBloc>();
-
     await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (_) => MultiBlocProvider(
-        providers: [
-          BlocProvider.value(value: medicineBloc),
-          BlocProvider.value(value: categoryBloc),
-        ],
-        child: AddEditMedicineDialog(medicine: medicine),
-      ),
+      builder: (_) => AddEditMedicineDialog(medicine: medicine),
     );
   }
 
@@ -453,7 +442,7 @@ class _MedicineViewState extends State<MedicineView> {
                         onPressed: _isUploadingExcel
                             ? null
                             : _pickAndUploadExcel,
-                        backgroundHover: Colors.lightGreen,
+                        backgroundHover: Theme.of(context).colorScheme.secondary,
                         icon: Icons.file_upload_outlined,
                         label: Text(
                           _isUploadingExcel ? 'Uploading…' : 'Import Excel',
@@ -611,6 +600,10 @@ class _MedicineCard extends StatelessWidget {
               Container(
                 width: 44,
                 height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(5),
+                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: .09)
+                ),
                 alignment: Alignment.center,
                 child: Text(
                   medicine.medName.isNotEmpty
@@ -644,10 +637,14 @@ class _MedicineCard extends StatelessWidget {
                         if (medicine.dosage != null &&
                             medicine.dosage!.isNotEmpty)
                           medicine.dosage!,
+                        if (medicine.unit.isNotEmpty)
+                          medicine.unit,
+
                         medicine.catName,
                         if (medicine.companyBrand != null &&
                             medicine.companyBrand!.isNotEmpty)
                           medicine.companyBrand!,
+
                       ].join('  •  '),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,

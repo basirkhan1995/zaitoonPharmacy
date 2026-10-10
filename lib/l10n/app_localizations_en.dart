@@ -184,4 +184,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noPrescriptionToday => 'No prescription for today';
+
+  @override
+  String get systemSettings => 'System';
 }

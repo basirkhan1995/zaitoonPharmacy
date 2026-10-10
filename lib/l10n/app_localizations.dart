@@ -445,6 +445,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No prescription for today'**
   String get noPrescriptionToday;
+
+  /// No description provided for @systemSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get systemSettings;
 }
 
 class _AppLocalizationsDelegate

@@ -19,21 +19,16 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     on<CategoryDeleteRequested>(_onDelete);
   }
 
-  // -----------------------------------------------------------------
-  // Helpers
-  // -----------------------------------------------------------------
   List<Category> get _currentItems =>
-      state is CategoryLoaded ? (state as CategoryLoaded).items : const [];
+      state is CategoryWithItems
+          ? (state as CategoryWithItems).items
+          : const [];
 
-  // -----------------------------------------------------------------
-  // Load list
-  // -----------------------------------------------------------------
   Future<void> _onLoad(
-      CategoryLoadRequested event,
-      Emitter<CategoryState> emit,
-      ) async {
+      CategoryLoadRequested event, Emitter<CategoryState> emit) async {
     emit(const CategoryLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getCategories();
       emit(CategoryLoaded(items));
     } on ApiException catch (e) {
@@ -41,13 +36,8 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
     }
   }
 
-  // -----------------------------------------------------------------
-  // Select one
-  // -----------------------------------------------------------------
   Future<void> _onSelect(
-      CategorySelectRequested event,
-      Emitter<CategoryState> emit,
-      ) async {
+      CategorySelectRequested event, Emitter<CategoryState> emit) async {
     final items = _currentItems;
     emit(const CategoryLoading());
     try {
@@ -59,61 +49,42 @@ class CategoryBloc extends Bloc<CategoryEvent, CategoryState> {
   }
 
   Future<void> _onClear(
-      CategoryClearSelection event,
-      Emitter<CategoryState> emit,
-      ) async {
+      CategoryClearSelection event, Emitter<CategoryState> emit) async {
     emit(CategoryLoaded(_currentItems));
   }
 
-  // -----------------------------------------------------------------
-  // Create
-  // -----------------------------------------------------------------
   Future<void> _onCreate(
-      CategoryCreateRequested event,
-      Emitter<CategoryState> emit,
-      ) async {
+      CategoryCreateRequested event, Emitter<CategoryState> emit) async {
     emit(CategorySaving(_currentItems));
     try {
       await _repo.createCategory(event.request);
       final items = await _repo.getCategories();
-      emit(CategoryLoaded(items));
-      emit(const CategoryActionSuccess('Category created'));
+      // Single emit — carries items AND the toast message
+      emit(CategoryActionSuccess(items, 'Category created'));
     } on ApiException catch (e) {
       emit(CategoryFailure(e.message));
     }
   }
 
-  // -----------------------------------------------------------------
-  // Update
-  // -----------------------------------------------------------------
   Future<void> _onUpdate(
-      CategoryUpdateRequested event,
-      Emitter<CategoryState> emit,
-      ) async {
+      CategoryUpdateRequested event, Emitter<CategoryState> emit) async {
     emit(CategorySaving(_currentItems));
     try {
       await _repo.updateCategory(event.catId, event.request);
       final items = await _repo.getCategories();
-      emit(CategoryLoaded(items));
-      emit(const CategoryActionSuccess('Category updated'));
+      emit(CategoryActionSuccess(items, 'Category updated'));
     } on ApiException catch (e) {
       emit(CategoryFailure(e.message));
     }
   }
 
-  // -----------------------------------------------------------------
-  // Delete
-  // -----------------------------------------------------------------
   Future<void> _onDelete(
-      CategoryDeleteRequested event,
-      Emitter<CategoryState> emit,
-      ) async {
+      CategoryDeleteRequested event, Emitter<CategoryState> emit) async {
     emit(CategorySaving(_currentItems));
     try {
       await _repo.deleteCategory(event.catId);
       final items = await _repo.getCategories();
-      emit(CategoryLoaded(items));
-      emit(const CategoryActionSuccess('Category deleted'));
+      emit(CategoryActionSuccess(items, 'Category deleted'));
     } on ApiException catch (e) {
       emit(CategoryFailure(e.message));
     }

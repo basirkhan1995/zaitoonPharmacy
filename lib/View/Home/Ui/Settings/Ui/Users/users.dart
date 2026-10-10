@@ -1,30 +1,30 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/toast.dart';
-import 'package:zpharmacy/Features/Widgets/zbutton.dart'; // ZOutlineButton
-import '../../../../Features/Widgets/shimmer.dart';
-import '../../../../Services/api_services.dart';
-import 'add_edit_org.dart';
-import 'bloc/organization_bloc.dart';
-import 'model/org_model.dart';
+import 'package:zpharmacy/Features/Widgets/zbutton.dart';
+import '../../../../../../Features/Widgets/shimmer.dart';
+import 'add_edit_users.dart';
+import 'bloc/users_bloc.dart';
+import 'model/users_model.dart';
 
-class OrganizationView extends StatefulWidget {
-  const OrganizationView({super.key});
+class UsersView extends StatefulWidget {
+  const UsersView({super.key});
 
   @override
-  State<OrganizationView> createState() => _OrganizationViewState();
+  State<UsersView> createState() => _UsersViewState();
 }
 
-class _OrganizationViewState extends State<OrganizationView> {
+class _UsersViewState extends State<UsersView> {
   final _searchCtrl = TextEditingController();
   Timer? _debounce;
-  String _search = ''; // normalized (lowercased, trimmed) query
+  String _search = '';
 
   @override
   void initState() {
     super.initState();
-    context.read<OrganizationBloc>().add(const OrganizationLoadRequested());
+    context.read<UsersBloc>().add(const UsersLoadRequested());
   }
 
   @override
@@ -35,7 +35,7 @@ class _OrganizationViewState extends State<OrganizationView> {
   }
 
   void _onSearchChanged(String value) {
-    setState(() {}); // rebuild so the clear (×) icon shows/hides
+    setState(() {});
     _debounce?.cancel();
     _debounce = Timer(const Duration(milliseconds: 250), () {
       if (!mounted) return;
@@ -49,22 +49,22 @@ class _OrganizationViewState extends State<OrganizationView> {
   }
 
   void _reload() {
-    context.read<OrganizationBloc>().add(const OrganizationLoadRequested());
+    context.read<UsersBloc>().add(const UsersLoadRequested());
   }
 
-  Future<void> _openAddEdit({Organization? org}) async {
-    final bloc = context.read<OrganizationBloc>();
+  Future<void> _openAddEdit({UserAccount? user}) async {
+    final bloc = context.read<UsersBloc>();
     await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => BlocProvider.value(
         value: bloc,
-        child: AddEditOrganizationDialog(organization: org),
+        child: AddEditUsersForm(user: user),
       ),
     );
   }
 
-  Future<void> _confirmDelete(Organization o) async {
+  Future<void> _confirmDelete(UserAccount u) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) {
@@ -75,7 +75,7 @@ class _OrganizationViewState extends State<OrganizationView> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
-          title: Text('Delete ${o.orgName}?'),
+          title: Text('Delete ${u.username}?'),
           content: const Text('This action cannot be undone.'),
           actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           actions: [
@@ -107,22 +107,21 @@ class _OrganizationViewState extends State<OrganizationView> {
         );
       },
     );
+
     if (ok == true && mounted) {
-      context
-          .read<OrganizationBloc>()
-          .add(OrganizationDeleteRequested(o.orgId));
+      context.read<UsersBloc>().add(UsersDeleteRequested(u.userId));
     }
   }
 
-  List<Organization> _applyFilter(List<Organization> all) {
+  List<UserAccount> _applyFilter(List<UserAccount> all) {
     if (_search.isEmpty) return all;
-    return all.where((o) {
-      final name = o.orgName.toLowerCase();
-      final contact = (o.contact ?? '').toLowerCase();
-      final phone = (o.phone ?? '').toLowerCase();
+    return all.where((u) {
+      final name = (u.fullName ?? '').toLowerCase();
+      final username = u.username.toLowerCase();
+      final role = (u.role ?? '').toLowerCase();
       return name.contains(_search) ||
-          contact.contains(_search) ||
-          phone.contains(_search);
+          username.contains(_search) ||
+          role.contains(_search);
     }).toList();
   }
 
@@ -131,9 +130,9 @@ class _OrganizationViewState extends State<OrganizationView> {
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      body: BlocListener<OrganizationBloc, OrganizationState>(
+      body: BlocListener<UsersBloc, UsersState>(
         listener: (context, state) {
-          if (state is OrganizationFailure) {
+          if (state is UsersFailure) {
             ToastManager.show(
               context: context,
               title: 'Failed',
@@ -141,7 +140,7 @@ class _OrganizationViewState extends State<OrganizationView> {
               type: ToastType.error,
             );
           }
-          if (state is OrganizationActionSuccess) {
+          if (state is UsersActionSuccess) {
             ToastManager.show(
               context: context,
               title: 'Success',
@@ -153,25 +152,23 @@ class _OrganizationViewState extends State<OrganizationView> {
         child: Column(
           children: [
             // =====================================================
-            // HEADER — icon + title on left, buttons on right
+            // HEADER
             // =====================================================
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Icon badge
                   Icon(
-                    Icons.business_outlined,
+                    Icons.manage_accounts_outlined,
                     size: 28,
                     color: scheme.onPrimaryContainer,
                   ),
                   const SizedBox(width: 12),
 
-                  // Title
                   Expanded(
                     child: Text(
-                      'Organizations',
+                      'Users',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context)
@@ -184,7 +181,6 @@ class _OrganizationViewState extends State<OrganizationView> {
                     ),
                   ),
 
-                  // Actions
                   Row(
                     spacing: 8,
                     children: [
@@ -197,7 +193,7 @@ class _OrganizationViewState extends State<OrganizationView> {
                         onPressed: () => _openAddEdit(),
                         icon: Icons.add,
                         isActive: true,
-                        label: const Text('New Organization'),
+                        label: const Text('New User'),
                       ),
                     ],
                   ),
@@ -206,7 +202,7 @@ class _OrganizationViewState extends State<OrganizationView> {
             ),
 
             // =====================================================
-            // SEARCH BAR
+            // SEARCH
             // =====================================================
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
@@ -215,7 +211,7 @@ class _OrganizationViewState extends State<OrganizationView> {
                 onChanged: _onSearchChanged,
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
-                  hintText: 'Search organization',
+                  hintText: 'Search by name, username, or role',
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _searchCtrl.text.isEmpty
                       ? null
@@ -256,26 +252,26 @@ class _OrganizationViewState extends State<OrganizationView> {
             // LIST
             // =====================================================
             Expanded(
-              child: BlocBuilder<OrganizationBloc, OrganizationState>(
+              child: BlocBuilder<UsersBloc, UsersState>(
                 builder: (context, state) {
-                  if (state is OrganizationLoading) {
-                    return UniversalShimmer.accountList(
-                      itemCount: 8,
-                      useAlternatingColors: true,
+                  if (state is UsersLoading) {
+                    return UniversalShimmer.dataList(
+                      itemCount: 15,
+                      numberOfColumns: 5,
                     );
                   }
-                  if (state is OrganizationFailure) {
+                  if (state is UsersFailure) {
                     return _ErrorView(
                       message: state.message,
                       onRetry: _reload,
                     );
                   }
 
-                  final allItems = state is OrganizationWithItems
+                  final all = state is UsersWithItems
                       ? state.items
-                      : const <Organization>[];
+                      : const <UserAccount>[];
 
-                  final items = _applyFilter(allItems);
+                  final items = _applyFilter(all);
 
                   if (items.isEmpty) {
                     final hasSearch = _searchCtrl.text.trim().isNotEmpty;
@@ -289,10 +285,10 @@ class _OrganizationViewState extends State<OrganizationView> {
                       itemCount: items.length,
                       itemBuilder: (_, i) => Padding(
                         padding: const EdgeInsets.only(bottom: 10),
-                        child: _OrgCard(
-                          org: items[i],
-                          onTap: () => _openAddEdit(org: items[i]),
-                          onEdit: () => _openAddEdit(org: items[i]),
+                        child: _UserCard(
+                          user: items[i],
+                          onTap: () => _openAddEdit(user: items[i]),
+                          onEdit: () => _openAddEdit(user: items[i]),
                           onDelete: () => _confirmDelete(items[i]),
                         ),
                       ),
@@ -309,14 +305,14 @@ class _OrganizationViewState extends State<OrganizationView> {
 }
 
 // =====================================================================
-// Card (compact)
+// Card
 // =====================================================================
-class _OrgCard extends StatelessWidget {
-  final Organization org;
+class _UserCard extends StatelessWidget {
+  final UserAccount user;
   final VoidCallback onTap, onEdit, onDelete;
 
-  const _OrgCard({
-    required this.org,
+  const _UserCard({
+    required this.user,
     required this.onTap,
     required this.onEdit,
     required this.onDelete,
@@ -328,98 +324,118 @@ class _OrgCard extends StatelessWidget {
 
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(5),
+      borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(5),
+        borderRadius: BorderRadius.circular(8),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(10, 8, 2, 8),
+          padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
           child: Row(
             children: [
-              // Logo
+              // Avatar
               Container(
-                width: 38,
-                height: 38,
+                width: 44,
+                height: 44,
                 decoration: BoxDecoration(
-                  color: scheme.primaryContainer.withValues(alpha: .4),
-                  borderRadius: BorderRadius.circular(5),
+                  color: scheme.primaryContainer,
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                clipBehavior: Clip.antiAlias,
-                child: org.hasLogo
-                    ? Image.network(
-                  '${ApiServices.baseUrl}/api/organizations/${org.orgId}/logo',
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, _, _) =>
-                      _initial(scheme, org.orgName),
-                )
-                    : _initial(scheme, org.orgName),
+                alignment: Alignment.center,
+                child: Text(
+                  user.username.isNotEmpty
+                      ? user.username[0].toUpperCase()
+                      : '?',
+                  style: TextStyle(
+                    color: scheme.onPrimaryContainer,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 20,
+                  ),
+                ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 14),
 
-              // Info
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            user.fullName ?? user.username,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (user.role != null) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: scheme.tertiaryContainer,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: Text(
+                              user.role!,
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                                color: scheme.onTertiaryContainer,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 3),
                     Text(
-                      org.orgName,
+                      '@${user.username}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: scheme.onSurfaceVariant,
                       ),
                     ),
-                    if ((org.contact != null && org.contact!.isNotEmpty) ||
-                        (org.phone != null && org.phone!.isNotEmpty)) ...[
-                      const SizedBox(height: 2),
-                      Row(
-                        children: [
-                          if (org.contact != null &&
-                              org.contact!.isNotEmpty)
-                            Flexible(
-                              child: Text(
-                                org.contact!,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: scheme.onSurfaceVariant,
-                                ),
-                              ),
-                            ),
-                          if (org.contact != null &&
-                              org.contact!.isNotEmpty &&
-                              org.phone != null &&
-                              org.phone!.isNotEmpty)
-                            Text(
-                              '  •  ',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                          if (org.phone != null && org.phone!.isNotEmpty)
-                            Text(
-                              org.phone!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: scheme.onSurfaceVariant,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
                   ],
                 ),
               ),
 
-              // Menu
+              // Active status chip
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 8, vertical: 5),
+                decoration: BoxDecoration(
+                  color: user.isActive
+                      ? scheme.secondaryContainer
+                      : scheme.errorContainer,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  user.isActive ? 'Active' : 'Disabled',
+                  style: TextStyle(
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w600,
+                    color: user.isActive
+                        ? scheme.onSecondaryContainer
+                        : scheme.onErrorContainer,
+                  ),
+                ),
+              ),
+
+              const SizedBox(width: 4),
+
               PopupMenuButton<_MenuAction>(
-                icon: Icon(Icons.more_vert,
-                    size: 20, color: scheme.onSurfaceVariant),
-                padding: EdgeInsets.zero,
-                splashRadius: 20,
+                tooltip: 'More',
+                icon: Icon(
+                  Icons.more_vert,
+                  color: scheme.onSurfaceVariant,
+                ),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(10),
                 ),
@@ -435,14 +451,15 @@ class _OrgCard extends StatelessWidget {
                       break;
                   }
                 },
-                itemBuilder: (_) => [
-                  const PopupMenuItem(
+                itemBuilder: (context) => [
+                  PopupMenuItem(
                     value: _MenuAction.edit,
                     child: Row(
                       children: [
-                        Icon(Icons.edit_outlined, size: 18),
-                        SizedBox(width: 10),
-                        Text('Edit'),
+                        Icon(Icons.edit_outlined,
+                            size: 18, color: scheme.onSurfaceVariant),
+                        const SizedBox(width: 10),
+                        const Text('Edit'),
                       ],
                     ),
                   ),
@@ -466,23 +483,12 @@ class _OrgCard extends StatelessWidget {
       ),
     );
   }
-
-  Widget _initial(ColorScheme scheme, String name) => Center(
-    child: Text(
-      name.isNotEmpty ? name[0].toUpperCase() : '?',
-      style: TextStyle(
-        color: scheme.onPrimaryContainer,
-        fontWeight: FontWeight.w600,
-        fontSize: 16,
-      ),
-    ),
-  );
 }
 
 enum _MenuAction { edit, delete }
 
 // =====================================================================
-// Empty view (search-aware)
+// Empty view
 // =====================================================================
 class _EmptyView extends StatelessWidget {
   final bool hasSearch;
@@ -498,13 +504,13 @@ class _EmptyView extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(
-              hasSearch ? Icons.search_off : Icons.business_outlined,
+              hasSearch ? Icons.search_off : Icons.manage_accounts_outlined,
               size: 56,
               color: scheme.onSurfaceVariant.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 14),
             Text(
-              hasSearch ? 'No matches' : 'No organizations yet',
+              hasSearch ? 'No matches' : 'No users yet',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
@@ -515,7 +521,7 @@ class _EmptyView extends StatelessWidget {
             Text(
               hasSearch
                   ? 'Try a different search term'
-                  : 'Tap "New" to get started',
+                  : 'Tap "New User" to get started',
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
             ),
@@ -526,6 +532,9 @@ class _EmptyView extends StatelessWidget {
   }
 }
 
+// =====================================================================
+// Error view
+// =====================================================================
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
@@ -542,14 +551,21 @@ class _ErrorView extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 56, color: scheme.error),
             const SizedBox(height: 14),
-            Text(message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: scheme.error)),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(color: scheme.error),
+            ),
             const SizedBox(height: 18),
             OutlinedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
               label: const Text('Retry'),
+              style: OutlinedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
             ),
           ],
         ),

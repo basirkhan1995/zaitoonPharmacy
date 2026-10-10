@@ -17,6 +17,9 @@ class PrescriptionDetails extends StatelessWidget {
 
     return BlocBuilder<PrescriptionBloc, PrescriptionState>(
       builder: (context, state) {
+        if(state is PrescriptionLoading){
+          return SizedBox();
+        }
         // If the bloc has a fully loaded detail (with items), prefer it
         final full = (state is PrescriptionLoaded && state.selected != null)
             ? state.selected!

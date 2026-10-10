@@ -63,5 +63,6 @@
   "instruction": "راهنمایی دوا",
   "qty": "تعداد",
   "prescriptions": "نسخه ها",
-  "noPrescriptionToday": "نسخه یافت نشد"
+  "noPrescriptionToday": "نسخه یافت نشد",
+  "systemSettings": "سیستم"
 }

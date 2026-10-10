@@ -273,7 +273,7 @@ class _StockViewState extends State<StockView> {
             // HEADER
             // =====================================================
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
@@ -330,7 +330,7 @@ class _StockViewState extends State<StockView> {
                     children: [
                       // Search
                       Expanded(
-                        flex: 6,
+                        flex: 7,
                         child: TextField(
                           controller: _searchCtrl,
                           onChanged: _onSearchChanged,
@@ -719,10 +719,10 @@ class _InvoiceCard extends StatelessWidget {
 
     return Material(
       color: scheme.surfaceContainerLow,
-      borderRadius: BorderRadius.circular(10),
+      borderRadius: BorderRadius.circular(5),
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(5),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
           child: Row(
@@ -731,11 +731,11 @@ class _InvoiceCard extends StatelessWidget {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: style.bg,
-                  borderRadius: BorderRadius.circular(8),
+                  color: style.bg.withValues(alpha: .7),
+                  borderRadius: BorderRadius.circular(5),
                 ),
                 alignment: Alignment.center,
-                child: Icon(style.icon, size: 18, color: style.fg),
+                child: Icon(style.icon, size: 18, color: style.fg.withValues(alpha: .9)),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -759,7 +759,7 @@ class _InvoiceCard extends StatelessWidget {
                               horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
                             color: style.bg,
-                            borderRadius: BorderRadius.circular(20),
+                            borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             style.label,

@@ -9,6 +9,9 @@ import 'package:zpharmacy/View/Home/Ui/Report/AntibioticReport/bloc/antibiotic_r
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/bloc/stock_card_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/TallySheet/bloc/tally_sheet_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Users/bloc/users_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Settings/bloc/settings_tab_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Staff/bloc/staff_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Stock/bloc/stock_bloc.dart';
 import 'package:zpharmacy/View/Home/bloc/menu_bloc.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
@@ -36,6 +39,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => ThemeBloc()),
         BlocProvider(create: (context) => LocalizationBloc()),
         BlocProvider(create: (context) => MenuBloc()),
+        BlocProvider(create: (context) => SettingsTabBloc()),
+
         BlocProvider(create: (context) => AuthBloc(Repositories(ApiServices()))..add(const AuthCheckRequested()),),
         BlocProvider(create: (context) => MedicineBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => CategoryBloc(Repositories(ApiServices()))),
@@ -47,6 +52,8 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => MedicineReportBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => TallySheetBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => AntibioticReportBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => UsersBloc(Repositories(ApiServices()))),
+        BlocProvider(create: (context) => StaffBloc(Repositories(ApiServices()))),
       ],
       child: BlocBuilder<LocalizationBloc, Locale>(
         builder: (context, locale) {

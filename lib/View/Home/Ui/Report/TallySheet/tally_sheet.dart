@@ -205,7 +205,7 @@ class _TallySheetViewState extends State<TallySheetView> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   Expanded(
-                    flex: 6,
+                    flex: 8,
                     child: Wrap(
                       spacing: 6,
                       runSpacing: 6,
@@ -280,9 +280,9 @@ class _TallySheetViewState extends State<TallySheetView> {
                   ),
                   const SizedBox(width: 12),
                   Expanded(
-                    flex: 4,
+                    flex: 3,
                     child: ZRangeDatePicker(
-                      height: 43,
+                      height: 40,
                       label: 'Date range',
                       initialStartDate: DateTime.tryParse(_pickerStart),
                       initialEndDate: DateTime.tryParse(_pickerEnd),
