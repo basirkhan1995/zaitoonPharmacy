@@ -11,7 +11,8 @@ import 'bloc/expiry_alert_bloc.dart';
 import 'model/med_batch_model.dart';
 
 class ExpiryAlertView extends StatefulWidget {
-  const ExpiryAlertView({super.key});
+  final String initialFilter;
+  const ExpiryAlertView({super.key, this.initialFilter = 'all'});
 
   @override
   State<ExpiryAlertView> createState() => _ExpiryAlertViewState();
@@ -34,13 +35,30 @@ class _ExpiryAlertViewState extends State<ExpiryAlertView> {
   void initState() {
     super.initState();
 
-    // Default: "All" = 2020-01-01 → today + 6 months
     final now = DateTime.now();
-    final end = DateTime(now.year, now.month + 6, now.day);
-    _pickerStart = '2020-01-01';
-    _pickerEnd   = _fmt(end);
-    _from        = _pickerStart;
-    _to          = _pickerEnd;
+
+    switch (widget.initialFilter) {
+      case '3m':
+        _pickerStart = _fmt(now);
+        _pickerEnd   = _fmt(DateTime(now.year, now.month + 3, now.day));
+        break;
+      case '6m':
+        _pickerStart = _fmt(now);
+        _pickerEnd   = _fmt(DateTime(now.year, now.month + 6, now.day));
+        break;
+      case 'expired':
+        _pickerStart = '2020-01-01';
+        _pickerEnd   = _fmt(now);
+        break;
+      case 'all':
+      default:
+        _pickerStart = '2020-01-01';
+        _pickerEnd   = _fmt(DateTime(now.year, now.month + 6, now.day));
+        break;
+    }
+
+    _from = _pickerStart;
+    _to   = _pickerEnd;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;

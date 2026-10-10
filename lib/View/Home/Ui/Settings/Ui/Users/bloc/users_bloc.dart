@@ -26,6 +26,7 @@ class UsersBloc extends Bloc<UsersEvent, UsersState> {
       UsersLoadRequested event, Emitter<UsersState> emit) async {
     emit(const UsersLoading());
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getUsers();
       emit(UsersLoaded(items));
     } on ApiException catch (e) {

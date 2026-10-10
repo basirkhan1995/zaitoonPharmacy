@@ -22,8 +22,7 @@ class DashboardStatsView extends StatelessWidget {
         }
 
         // Show the layout regardless — during load the numbers shimmer
-        final loading =
-            state is DashboardStatsInitial || state is DashboardStatsLoading;
+        final loading = state is DashboardStatsInitial || state is DashboardStatsLoading;
         final stats = state is DashboardStatsLoaded ? state.stats : null;
 
         return Column(
@@ -169,7 +168,7 @@ class DashboardStatsView extends StatelessWidget {
                       onTap: () => _goTo(context, MenuName.stock),
                     ),
                     _StatCard(
-                      icon: Icons.inventory_2_outlined,
+                      icon: Icons.medical_information_outlined,
                       label: 'Units in Stock',
                       value: loading
                           ? null
@@ -390,7 +389,7 @@ class _StatCardState extends State<_StatCard> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Header row — icon + label
+                  // ── Header row — icon + label + arrow
                   Row(
                     children: [
                       Container(
@@ -436,35 +435,42 @@ class _StatCardState extends State<_StatCard> {
                   ),
                   const SizedBox(height: 10),
 
-                  // ── VALUE — shimmer when null
+                  // ── Value row — number on the left, subtitle inline on the right
                   SizedBox(
-                    height: 26,   // reserves space so layout doesn't jump
+                    height: 26,
                     child: widget.value == null
                         ? const _ShimmerNumber()
-                        : Align(
-                      alignment: Alignment.centerLeft,
-                      child: Text(
-                        widget.value!,
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.w800,
-                          height: 1.1,
-                          color: widget.accent,
+                        : Row(
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          widget.value!,
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            height: 1.1,
+                            color: widget.accent,
+                          ),
                         ),
-                      ),
+                        if (widget.subtitle != null) ...[
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              widget.subtitle!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w500,
+                                color: scheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                   ),
-
-                  if (widget.subtitle != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      widget.subtitle!,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: scheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
                 ],
               ),
             ),

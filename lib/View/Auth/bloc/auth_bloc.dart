@@ -1,6 +1,7 @@
 import 'package:bloc/bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../../Services/api_exception.dart';
+import '../../../Services/credential_store.dart';
 import '../../../Services/repository.dart';
 import '../auth_model.dart';
 part 'auth_event.dart';
@@ -19,31 +20,47 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   // -----------------------------------------------------------------
   // Auto-login check on app start
   // -----------------------------------------------------------------
-  Future<void> _onCheck(AuthCheckRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onCheck(
+      AuthCheckRequested event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
+
     if (!_repo.isLoggedIn) {
       emit(const AuthUnauthenticated());
       return;
     }
+
     try {
       final user = await _repo.me();
       emit(AuthAuthenticated(user));
-    } on ApiException {
-      emit(const AuthUnauthenticated());
+    } on ApiException catch (e) {
+      if (e.code == 'TOKEN_EXPIRED') {
+        emit(AuthUnauthenticated(message: 'Session expired — please log in again'));
+      } else {
+        emit(const AuthUnauthenticated());
+      }
     }
   }
 
   // -----------------------------------------------------------------
   // Login
   // -----------------------------------------------------------------
-  Future<void> _onLogin(AuthLoginRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLogin(
+      AuthLoginRequested event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
     try {
       final auth = await _repo.login(
-        username: event.username,
-        password: event.password,
+        username:   event.username,
+        password:   event.password,
         rememberMe: event.rememberMe,
       );
+
+      // Persist credentials for next login
+      await CredentialStore.save(
+        username: event.username,
+        password: event.password,
+        remember: event.rememberMe,
+      );
+
       emit(AuthAuthenticated(auth.user));
     } on ApiException catch (e) {
       emit(AuthFailure(e.message));

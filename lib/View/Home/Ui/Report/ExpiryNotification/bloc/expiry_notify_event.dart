@@ -8,5 +8,12 @@ sealed class ExpiryNotifyEvent extends Equatable {
 }
 
 final class ExpiryNotifyLoadRequested extends ExpiryNotifyEvent {
-  const ExpiryNotifyLoadRequested();
+  /// When true and data already exists, `Loading` is not emitted —
+  /// the old data stays visible while we refresh in the background.
+  final bool silent;
+
+  const ExpiryNotifyLoadRequested({this.silent = false});
+
+  @override
+  List<Object?> get props => [silent];
 }

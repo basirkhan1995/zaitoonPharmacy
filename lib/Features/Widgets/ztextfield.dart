@@ -21,7 +21,7 @@ class ZTextFieldEntitled extends StatelessWidget {
   final TextInputAction? inputAction;
   final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onSubmit;
-  final FormFieldValidator? validator;
+  final FormFieldValidator<String>? validator;
   final TextInputType? keyboardInputType;
   final TextEditingController? controller;
   final FocusNode? focusNode;

@@ -8,7 +8,7 @@ import 'package:zpharmacy/View/Home/Ui/Organization/bloc/organization_bloc.dart'
 import 'package:zpharmacy/View/Home/Ui/Prescription/bloc/prescription_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/AntibioticReport/bloc/antibiotic_report_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/ExpiryNotification/bloc/expiry_notify_bloc.dart';
-import 'package:zpharmacy/View/Home/Ui/Report/MedBatchReport/bloc/expiry_alert_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Report/ExpiryAlertReport/bloc/expiry_alert_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/bloc/stock_card_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/TallySheet/bloc/tally_sheet_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';

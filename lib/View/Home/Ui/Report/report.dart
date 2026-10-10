@@ -3,7 +3,7 @@ import 'package:zpharmacy/Features/Widgets/znavigator.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/MedicineReport/medicine_report_view.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/stoc_card_view.dart';
 import 'AntibioticReport/antibiotic_report.dart';
-import 'MedBatchReport/med_batch_report.dart';
+import 'ExpiryAlertReport/expiry_alert_batch_report.dart';
 import 'TallySheet/tally_sheet.dart';
 
 class ReportView extends StatelessWidget {

@@ -8,7 +8,7 @@ import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
 import '../View/Home/Ui/Report/AntibioticReport/model/antibiotic_model.dart';
 import '../View/Home/Ui/Report/ExpiryNotification/model/expiry_notify_model.dart';
-import '../View/Home/Ui/Report/MedBatchReport/model/med_batch_model.dart';
+import '../View/Home/Ui/Report/ExpiryAlertReport/model/med_batch_model.dart';
 import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
 import '../View/Home/Ui/Report/TallySheet/model/tally_sheet_model.dart';

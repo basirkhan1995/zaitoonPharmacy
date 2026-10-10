@@ -19,8 +19,15 @@ class ExpiryNotifyBloc extends Bloc<ExpiryNotifyEvent, ExpiryNotifyState> {
       ExpiryNotifyLoadRequested event,
       Emitter<ExpiryNotifyState> emit,
       ) async {
-    emit(const ExpiryNotifyLoading());
+    // Silent refresh: keep the old data on screen while reloading
+    final keepVisible = event.silent && state is ExpiryNotifyLoaded;
+
+    if (!keepVisible) {
+      emit(const ExpiryNotifyLoading());
+    }
+
     try {
+      await Future.delayed(Duration(milliseconds: 500));
       final summary = await _repo.getExpirySummary();
       emit(ExpiryNotifyLoaded(summary));
     } on ApiException catch (e) {
