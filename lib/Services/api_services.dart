@@ -290,6 +290,25 @@ class ApiServices {
     return response.data ?? <int>[];
   }
 
+  Future<String> download(
+      String endpoint,
+      String savePath, {
+        Map<String, dynamic>? queryParams,
+        Options? options,
+        CancelToken? cancelToken,
+        ProgressCallback? onReceiveProgress,
+      }) async {
+    await _dio.download(
+      endpoint,
+      savePath,
+      queryParameters: queryParams,
+      options: options,
+      cancelToken: cancelToken,
+      onReceiveProgress: onReceiveProgress,
+    );
+    return savePath;
+  }
+
   Future<void> _ensureInit() async {
     if (!_initialized) await init();
   }

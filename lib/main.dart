@@ -7,10 +7,11 @@ import 'package:zpharmacy/View/Home/Ui/Medicine/batch_bloc/batch_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Organization/bloc/organization_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/bloc/prescription_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/AntibioticReport/bloc/antibiotic_report_bloc.dart';
-import 'package:zpharmacy/View/Home/Ui/Report/ExpiryNotification/bloc/expiry_notify_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Report/ExpiryNotify/bloc/expiry_notify_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/ExpiryAlertReport/bloc/expiry_alert_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/bloc/stock_card_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/TallySheet/bloc/tally_sheet_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Backup/bloc/backup_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Users/bloc/users_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/bloc/settings_tab_bloc.dart';
@@ -60,6 +61,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => ExpiryAlertBloc(Repositories(ApiServices()))),
         BlocProvider(create: (context) => ExpiryNotifyBloc(Repositories(ApiServices()))..add(ExpiryNotifyLoadRequested())),
         BlocProvider(create: (context) => DashboardStatsBloc(Repositories(ApiServices()))..add(DashboardStatsLoadRequested())),
+        BlocProvider(create: (context) => BackupBloc(Repositories(ApiServices()))),
       ],
       child: BlocBuilder<LocalizationBloc, Locale>(
         builder: (context, locale) {

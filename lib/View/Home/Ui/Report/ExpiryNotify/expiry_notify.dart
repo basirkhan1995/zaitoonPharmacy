@@ -117,10 +117,6 @@ class ExpiryNotifyCard extends StatelessWidget {
                         sublabel: 'past expiry',
                         count: summary?.expired,
                         accent: const Color(0xFFDC2626),
-                        gradient: const [
-                          Color(0xFFFEE2E2),
-                          Color(0xFFFEF2F2),
-                        ],
                         onTap: () => ZNavigator.goto(
                           context: context,
                           const ExpiryAlertView(initialFilter: 'expired'),
@@ -135,10 +131,6 @@ class ExpiryNotifyCard extends StatelessWidget {
                         sublabel: 'urgent',
                         count: summary?.within3m,
                         accent: const Color(0xFFEA580C),
-                        gradient: const [
-                          Color(0xFFFFEDD5),
-                          Color(0xFFFFF7ED),
-                        ],
                         onTap: () => ZNavigator.goto(
                           context: context,
                           const ExpiryAlertView(initialFilter: '3m'),
@@ -153,10 +145,6 @@ class ExpiryNotifyCard extends StatelessWidget {
                         sublabel: 'watchlist',
                         count: summary?.within6m,
                         accent: const Color(0xFFD97706),
-                        gradient: const [
-                          Color(0xFFFEF3C7),
-                          Color(0xFFFFFBEB),
-                        ],
                         onTap: () => ZNavigator.goto(
                           context: context,
                           const ExpiryAlertView(initialFilter: '6m'),
@@ -188,7 +176,7 @@ class _CardShell extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: scheme.surface,
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(
           color: scheme.outline.withValues(alpha: 0.25),
           width: 1,
@@ -221,11 +209,11 @@ class _HeaderIcon extends StatelessWidget {
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
           colors: [
-            accent.withValues(alpha: 0.18),
+            accent.withValues(alpha: 0.10),
             accent.withValues(alpha: 0.06),
           ],
         ),
-        borderRadius: BorderRadius.circular(11),
+        borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: accent.withValues(alpha: 0.25),
           width: 1,
@@ -243,7 +231,7 @@ class _HeaderIcon extends StatelessWidget {
       )
           : Icon(
         Icons.notifications_active_rounded,
-        size: 20,
+        size: 24,
         color: accent,
       ),
     );
@@ -264,7 +252,7 @@ class _Badge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(3),
         border: Border.all(color: color.withValues(alpha: 0.3)),
       ),
       child: Text(
@@ -477,7 +465,6 @@ class _StatTile extends StatefulWidget {
   final String sublabel;
   final int? count;
   final Color accent;
-  final List<Color> gradient;
   final VoidCallback onTap;
 
   const _StatTile({
@@ -486,7 +473,6 @@ class _StatTile extends StatefulWidget {
     required this.sublabel,
     required this.count,
     required this.accent,
-    required this.gradient,
     required this.onTap,
   });
 
@@ -499,9 +485,30 @@ class _StatTileState extends State<_StatTile> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final loading = widget.count == null;
-    final isEmpty = !loading && widget.count == 0;
+    final scheme   = Theme.of(context).colorScheme;
+    final isDark   = scheme.brightness == Brightness.dark;
+    final loading  = widget.count == null;
+    final isEmpty  = !loading && widget.count == 0;
+
+    // ── Soft accent-tinted background ────────────────────────────
+    // In light mode: pastel tint of the accent (like before, but softer)
+    // In dark mode:  very subtle overlay of the accent on the surface
+    final softBg = Color.alphaBlend(
+      widget.accent.withValues(
+        alpha: isEmpty ? 0.0 : (isDark ? 0.10 : 0.10),
+      ),
+      scheme.surfaceContainerLow,
+    );
+
+    // Border: subtle accent tint of the current theme surface
+    final borderColor = isEmpty || loading
+        ? scheme.outline.withValues(alpha: 0.15)
+        : widget.accent.withValues(alpha: isDark ? 0.30 : 0.22);
+
+    // Icon + text color: use the accent but slightly muted in dark mode
+    final fg = isEmpty || loading
+        ? scheme.onSurfaceVariant
+        : (isDark ? widget.accent.withValues(alpha: 0.85) : widget.accent);
 
     return MouseRegion(
       onEnter: (_) => setState(() => _hovered = true),
@@ -515,29 +522,19 @@ class _StatTileState extends State<_StatTile> {
         transform: Matrix4.translationValues(
             0, (_hovered && !loading) ? -2 : 0, 0),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: (isEmpty || loading)
-                ? [
-              scheme.surfaceContainerHighest.withValues(alpha: 0.3),
-              scheme.surfaceContainerHighest.withValues(alpha: 0.15),
-            ]
-                : widget.gradient,
-          ),
+          color: softBg,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: (isEmpty || loading)
-                ? scheme.outline.withValues(alpha: 0.15)
-                : widget.accent.withValues(
-              alpha: _hovered ? 0.5 : 0.2,
-            ),
+            color: _hovered && !isEmpty && !loading
+                ? widget.accent.withValues(alpha: 0.55)
+                : borderColor,
             width: _hovered && !isEmpty && !loading ? 1.4 : 1,
           ),
           boxShadow: _hovered && !isEmpty && !loading
               ? [
             BoxShadow(
-              color: widget.accent.withValues(alpha: 0.15),
+              color: widget.accent.withValues(
+                  alpha: isDark ? 0.20 : 0.12),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -557,13 +554,7 @@ class _StatTileState extends State<_StatTile> {
                 children: [
                   Row(
                     children: [
-                      Icon(
-                        widget.icon,
-                        size: 15,
-                        color: (isEmpty || loading)
-                            ? scheme.onSurfaceVariant
-                            : widget.accent,
-                      ),
+                      Icon(widget.icon, size: 15, color: fg),
                       const Spacer(),
                       if (!isEmpty && !loading)
                         AnimatedOpacity(
@@ -572,14 +563,14 @@ class _StatTileState extends State<_StatTile> {
                           child: Icon(
                             Icons.arrow_outward_rounded,
                             size: 13,
-                            color: widget.accent,
+                            color: fg,
                           ),
                         ),
                     ],
                   ),
                   const SizedBox(height: 6),
 
-                  // Big count — shimmer when loading
+                  // Count — shimmer when loading
                   SizedBox(
                     height: 26,
                     child: loading
@@ -593,9 +584,7 @@ class _StatTileState extends State<_StatTile> {
                           fontWeight: FontWeight.w800,
                           height: 1,
                           letterSpacing: -0.5,
-                          color: isEmpty
-                              ? scheme.onSurfaceVariant
-                              : widget.accent,
+                          color: fg,
                         ),
                       ),
                     ),
@@ -610,9 +599,7 @@ class _StatTileState extends State<_StatTile> {
                           fontSize: 10.5,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 0.1,
-                          color: (isEmpty || loading)
-                              ? scheme.onSurfaceVariant
-                              : widget.accent,
+                          color: fg,
                         ),
                       ),
                       Text(

@@ -6,8 +6,8 @@ import 'package:zpharmacy/View/Home/Ui/Dashboard/stats_view.dart';
 
 import '../../bloc/menu_bloc.dart';
 import 'bloc/dashboard_stats_bloc.dart';
-import '../Report/ExpiryNotification/expiry_notify.dart';
-import '../Report/ExpiryNotification/bloc/expiry_notify_bloc.dart';
+import '../Report/ExpiryNotify/expiry_notify.dart';
+import '../Report/ExpiryNotify/bloc/expiry_notify_bloc.dart';
 
 class DashboardView extends StatefulWidget {
   const DashboardView({super.key});
@@ -114,38 +114,28 @@ class _DashboardViewState extends State<DashboardView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // ── Greeting header with user + logout
-                _DashboardHeader(onLogout: _confirmLogout),
+                // ── Header + clock — fixed 118px so stretch works
+                SizedBox(
+                  height: 110,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(
+                        flex: 5,
+                        child: _DashboardHeader(onLogout: _confirmLogout),
+                      ),
+                      const SizedBox(width: 16),
+                      const Expanded(
+                        flex: 2,
+                        child: DigitalClock(),
+                      ),
+                    ],
+                  ),
+                ),
                 const SizedBox(height: 20),
 
-                // ── Clock + Expiry — responsive row
-                LayoutBuilder(
-                  builder: (context, c) {
-                    final stacked = c.maxWidth < 800;
-
-                    if (stacked) {
-                      return const Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          DigitalClock(),
-                          SizedBox(height: 16),
-                          ExpiryNotifyCard(),
-                        ],
-                      );
-                    }
-
-                    return const IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(flex: 2, child: DigitalClock()),
-                          SizedBox(width: 16),
-                          Expanded(flex: 5, child: ExpiryNotifyCard()),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+                // ── Expiry card — full width
+                const ExpiryNotifyCard(),
 
                 const SizedBox(height: 24),
                 const DashboardStatsView(),
@@ -159,7 +149,7 @@ class _DashboardViewState extends State<DashboardView> {
 }
 
 // =====================================================================
-// Greeting header — refined, minimal, calm
+// Greeting header
 // =====================================================================
 class _DashboardHeader extends StatelessWidget {
   final VoidCallback onLogout;
@@ -185,30 +175,31 @@ class _DashboardHeader extends StatelessWidget {
         : 'Good evening';
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 16, 12, 16),
+      padding: const EdgeInsets.fromLTRB(18, 8, 12, 8),
       decoration: BoxDecoration(
         color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: scheme.outline.withValues(alpha: 0.14),
           width: 1,
         ),
       ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          // ── Avatar — square, soft, minimal
+          // ── Avatar
           Container(
-            width: 44,
-            height: 44,
+            width: 48,
+            height: 48,
             decoration: BoxDecoration(
               color: scheme.primaryContainer.withValues(alpha: 0.55),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(5),
             ),
             alignment: Alignment.center,
             child: Text(
               initial,
               style: TextStyle(
-                fontSize: 18,
+                fontSize: 24,
                 fontWeight: FontWeight.w700,
                 color: scheme.onPrimaryContainer,
               ),
@@ -220,9 +211,9 @@ class _DashboardHeader extends StatelessWidget {
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Greeting line — small, muted
                 Text(
                   greeting,
                   style: TextStyle(
@@ -232,8 +223,6 @@ class _DashboardHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 3),
-
-                // Name + role chip
                 Row(
                   children: [
                     Flexible(
@@ -258,8 +247,7 @@ class _DashboardHeader extends StatelessWidget {
                         color: scheme.surfaceContainerHighest,
                         borderRadius: BorderRadius.circular(4),
                         border: Border.all(
-                          color:
-                          scheme.outline.withValues(alpha: 0.15),
+                          color: scheme.outline.withValues(alpha: 0.15),
                         ),
                       ),
                       child: Text(
@@ -275,8 +263,6 @@ class _DashboardHeader extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 2),
-
-                // Org · username
                 Text(
                   '${user.orgName}  ·  @${user.username}',
                   maxLines: 1,
@@ -293,7 +279,6 @@ class _DashboardHeader extends StatelessWidget {
 
           const SizedBox(width: 8),
 
-          // ── Divider + Logout
           Container(
             height: 32,
             width: 1,

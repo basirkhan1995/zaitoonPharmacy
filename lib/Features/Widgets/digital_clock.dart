@@ -47,7 +47,6 @@ class _DigitalClockState extends State<DigitalClock> {
     return ZCover(
       radius: 6,
       padding: const EdgeInsets.all(10),
-      margin: const EdgeInsets.all(4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [

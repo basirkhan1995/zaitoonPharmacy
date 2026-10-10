@@ -39,12 +39,12 @@ class DashboardStatsView extends StatelessWidget {
                         .colorScheme
                         .primaryContainer
                         .withValues(alpha: 0.5),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(5),
                   ),
                   alignment: Alignment.center,
                   child: Icon(
-                    Icons.dashboard_outlined,
-                    size: 22,
+                    Icons.line_axis_rounded,
+                    size: 26,
                     color: Theme.of(context).colorScheme.onPrimaryContainer,
                   ),
                 ),

@@ -1,13 +1,14 @@
 import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:zpharmacy/View/Auth/auth_model.dart';
 import '../View/Home/Ui/Dashboard/model/stats_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
 import '../View/Home/Ui/Prescription/model/prescription_model.dart';
 import '../View/Home/Ui/Report/AntibioticReport/model/antibiotic_model.dart';
-import '../View/Home/Ui/Report/ExpiryNotification/model/expiry_notify_model.dart';
+import '../View/Home/Ui/Report/ExpiryNotify/model/expiry_notify_model.dart';
 import '../View/Home/Ui/Report/ExpiryAlertReport/model/med_batch_model.dart';
 import '../View/Home/Ui/Report/MedicineReport/model/medicine_report_model.dart';
 import '../View/Home/Ui/Report/StockCard/model/stock_card_model.dart';
@@ -567,5 +568,100 @@ Future<void> deleteCategory(int catId) async {
   Future<DashboardStats> getDashboardStats() async {
     final data = await _api.get('/api/dashboard/stats');
     return DashboardStats.fromJson(data as Map<String, dynamic>);
+  }
+
+// =================================================================
+// BACKUP
+// =================================================================
+
+  Future<List<Map<String, dynamic>>> getBackupList() async {
+    final data = await _api.get('/api/backup/list');
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((e) => Map<String, dynamic>.from(e))
+        .toList();
+  }
+
+  Future<Map<String, dynamic>> canCreateBackup() async {
+    final data = await _api.get('/api/backup/can-create');
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    // Unexpected shape → default to "can create" so UI isn't stuck
+    return {'canCreate': true, 'reason': null};
+  }
+
+  Future<Map<String, dynamic>> createBackup() async {
+    final data = await _api.post('/api/backup/create');
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    // Unexpected shape → let the bloc treat this as a failure
+    throw Exception('Unexpected response from create backup');
+  }
+
+  Future<File> downloadBackup(String fileName) async {
+    final baseDir = await getApplicationDocumentsDirectory();
+    final backupDir = Directory('${baseDir.path}/ZaitoonBackups');
+    if (!await backupDir.exists()) {
+      await backupDir.create(recursive: true);
+    }
+
+    final savePath = '${backupDir.path}/$fileName';
+
+    await _api.download(
+      '/api/backup/download/$fileName',
+      savePath,
+    );
+
+    return File(savePath);
+  }
+
+  Future<void> deleteBackup(String fileName) async {
+    await _api.delete('/api/backup/$fileName');
+  }
+
+  Future<void> restoreBackupFromServer(String fileName) async {
+    await _api.post('/api/backup/restore/$fileName');
+  }
+
+  Future<void> restoreBackupFromUpload(File file) async {
+    final fileName = file.path.split(Platform.pathSeparator).last;
+    final formData = FormData.fromMap({
+      'sqlFile': await MultipartFile.fromFile(file.path, filename: fileName),
+    });
+
+    await _api.uploadFileJson(
+      '/api/backup/restore-upload',
+      data: formData,
+    );
+  }
+
+  Future<Map<String, dynamic>> checkMysqlConnection() async {
+    final data = await _api.get('/api/backup/check-mysql');
+    if (data is Map) {
+      return Map<String, dynamic>.from(data);
+    }
+    return {'connected': false, 'message': 'Bad response'};
+  }
+
+  Future<Map<String, dynamic>> renameBackup(String oldName, String newName) async {
+    final data = await _api.post(
+      '/api/backup/rename/$oldName',
+      data: { 'newName': newName },
+    );
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw Exception('Unexpected response from rename backup');
+  }
+
+  Future<Map<String, dynamic>> getBackupInfo(String fileName) async {
+    final data = await _api.get('/api/backup/info/$fileName');
+    if (data is Map) return Map<String, dynamic>.from(data);
+    throw Exception('Unexpected response from backup info');
+  }
+
+  Future<void> openBackupFolder() async {
+    await _api.post('/api/backup/open-folder');
   }
 }
