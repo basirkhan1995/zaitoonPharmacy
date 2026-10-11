@@ -673,9 +673,9 @@ Future<void> deleteCategory(int catId) async {
 
   Future<List<SecurityQuestion>> getSecurityQuestions() async {
     final res = await _api.get('/api/auth/security-questions');
-    final list = (res is Map && res['data'] is List)
-        ? res['data'] as List
-        : const [];
+    final dynamic raw = (res is Map && res['data'] is List) ? res['data'] : res;
+    if (raw is! List) return const [];
+    final list = raw;
     return list
         .whereType<Map>()
         .map((e) => SecurityQuestion.fromJson(Map<String, dynamic>.from(e)))

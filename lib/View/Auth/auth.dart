@@ -8,6 +8,7 @@ import 'package:zpharmacy/Themes/Ui/theme_selector.dart';
 import 'package:zpharmacy/View/ForgotPassword/forgot_password.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 import 'package:zpharmacy/l10n/locale_selector.dart';
+import '../../Services/server_status.dart';
 import '../ForgotPassword/security_que_view.dart';
 import '../Home/home.dart';
 import 'bloc/auth_bloc.dart';
@@ -132,6 +133,7 @@ class _AuthViewState extends State<AuthView> {
         },
         child: Stack(
           children: [
+
             // ── Selectors top-right
             Positioned(
               top: 12,
@@ -171,6 +173,41 @@ class _AuthViewState extends State<AuthView> {
                     onSubmit:         _submit,
                   ),
                 ),
+              ),
+            ),
+
+            Positioned(
+              top: 0, left: 0, right: 0,
+              child: BlocBuilder<ServerStatusCubit, ServerStatus>(
+                builder: (context, status) {
+                  if (status == ServerStatus.up ||
+                      status == ServerStatus.unknown ||
+                      status == ServerStatus.checking) {
+                    return const SizedBox.shrink();
+                  }
+                  return Material(
+                    color: Colors.orange.shade100,
+                    child: SafeArea(
+                      bottom: false,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.cloud_off, color: Colors.orange),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text('Cannot reach the server. Retrying…'),
+                            ),
+                            TextButton(
+                              onPressed: () => context.read<ServerStatusCubit>().check(),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
           ],

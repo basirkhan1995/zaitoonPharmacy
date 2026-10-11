@@ -31,6 +31,9 @@ import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Backup/bloc/backup_bloc.dart'
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Users/bloc/users_bloc.dart';
 
+import 'Services/server_status.dart';
+import 'View/ForgotPassword/SecurityQuestions/security_questions_bloc.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiServices().init();
@@ -46,6 +49,16 @@ class MyApp extends StatelessWidget {
       create: (_) => Repositories(ApiServices()),
       child: MultiBlocProvider(
         providers: [
+          BlocProvider(
+            create: (_) =>
+            ServerStatusCubit('http://localhost:3000')..startPolling(),
+          ),
+
+          BlocProvider(
+          create: (ctx) => SecurityQuestionsBloc(
+          ctx.read<Repositories>(),
+          )..add(const SecurityQuestionsLoadRequested())),
+
           // ---- App-wide (no repo needed) ----
           BlocProvider(create: (_) => ThemeBloc()),
           BlocProvider(create: (_) => LocalizationBloc()),

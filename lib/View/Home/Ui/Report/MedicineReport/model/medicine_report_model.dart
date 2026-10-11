@@ -30,7 +30,8 @@ class MedicineReport {
         withMovements:  (json['with_movements'] as num?)?.toInt() ?? 0,
         grandTotalIn:   (json['grand_total_in'] as num?)?.toInt() ?? 0,
         grandTotalOut:  (json['grand_total_out'] as num?)?.toInt() ?? 0,
-        grandBalance:   (json['grand_balance'] as num?)?.toInt() ?? 0,
+        // ▼ FIX: backend key is "grand_closing"
+        grandBalance:   (json['grand_closing'] as num?)?.toInt() ?? 0,
         medicines: ((json['medicines'] as List?) ?? [])
             .map((e) =>
             MedicineReportRow.fromJson(e as Map<String, dynamic>))
@@ -73,7 +74,7 @@ class MedicineReportRow {
         catName:       json['cat_name'] as String? ?? '',
         totalIn:       (json['total_in'] as num?)?.toInt() ?? 0,
         totalOut:      (json['total_out'] as num?)?.toInt() ?? 0,
-        balance:       (json['balance'] as num?)?.toInt() ?? 0,
+        balance:       (json['closing_balance'] as num?)?.toInt() ?? 0,
         organizations: json['organizations'] as String?,
       );
 }
