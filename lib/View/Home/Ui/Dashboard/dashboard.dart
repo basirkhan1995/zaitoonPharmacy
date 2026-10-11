@@ -125,8 +125,8 @@ class _DashboardViewState extends State<DashboardView> {
                         child: _DashboardHeader(onLogout: _confirmLogout),
                       ),
                       const SizedBox(width: 16),
-                      const Expanded(
-                        flex: 2,
+                      const SizedBox(
+                        width: 300,
                         child: DigitalClock(),
                       ),
                     ],
