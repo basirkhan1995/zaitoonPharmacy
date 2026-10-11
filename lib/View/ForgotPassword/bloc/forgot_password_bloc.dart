@@ -17,21 +17,24 @@ class ForgotPasswordBloc extends Bloc<ForgotPasswordEvent, ForgotPasswordState> 
     on<ForgotPasswordReset>(_onReset);
   }
 
-  // =================================================================
-  // Step 1 — username → questions
-  // =================================================================
   Future<void> _onStart(
       ForgotPasswordStartRequested event,
       Emitter<ForgotPasswordState> emit,
       ) async {
     emit(const ForgotPasswordLoading());
     try {
-      final data = await _repo.startPasswordReset(event.username);
-      final d = Map<String, dynamic>.from(data['data'] as Map);
+      final raw = await _repo.startPasswordReset(event.username);
+
+      // The repo may return either the full envelope { ok, data } or the
+      // already-unwrapped payload { userId, questions }. Handle both.
+      final Map<String, dynamic> d = (raw['data'] is Map)
+          ? Map<String, dynamic>.from(raw['data'] as Map)
+          : Map<String, dynamic>.from(raw as Map);
 
       final questions = (d['questions'] as List)
-          .map((e) =>
-          SecurityQuestion.fromJson(Map<String, dynamic>.from(e as Map)))
+          .map((e) => SecurityQuestion.fromJson(
+        Map<String, dynamic>.from(e as Map),
+      ))
           .toList();
 
       emit(ForgotPasswordQuestionsLoaded(
@@ -44,7 +47,6 @@ class ForgotPasswordBloc extends Bloc<ForgotPasswordEvent, ForgotPasswordState> 
       emit(ForgotPasswordFailure(e.toString()));
     }
   }
-
   // =================================================================
   // Step 2 — answers + new password
   // =================================================================

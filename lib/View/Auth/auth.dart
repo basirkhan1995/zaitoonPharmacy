@@ -8,7 +8,7 @@ import 'package:zpharmacy/Themes/Ui/theme_selector.dart';
 import 'package:zpharmacy/View/ForgotPassword/forgot_password.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 import 'package:zpharmacy/l10n/locale_selector.dart';
-
+import '../ForgotPassword/security_que_view.dart';
 import '../Home/home.dart';
 import 'bloc/auth_bloc.dart';
 
@@ -31,10 +31,23 @@ class _AuthViewState extends State<AuthView> {
   /// Inline error shown below the button (login failure / session expired).
   String? _inlineError;
 
+  /// Guards against routing twice (e.g. initState check + listener).
+  bool _routed = false;
+
   @override
   void initState() {
     super.initState();
     _loadSavedCredentials();
+
+    // Handle cold-start auto-login: AuthBloc may have already emitted
+    // AuthAuthenticated before this widget's listener was attached.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = context.read<AuthBloc>().state;
+      if (state is AuthAuthenticated) {
+        _routeAfterAuth(state);
+      }
+    });
   }
 
   Future<void> _loadSavedCredentials() async {
@@ -61,7 +74,6 @@ class _AuthViewState extends State<AuthView> {
   }
 
   void _submit() {
-    // Clear any previous error before attempting again
     setState(() => _inlineError = null);
 
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -74,6 +86,25 @@ class _AuthViewState extends State<AuthView> {
     );
   }
 
+  /// Decide where to send the user after AuthAuthenticated.
+  void _routeAfterAuth(AuthAuthenticated state) {
+    if (_routed) return;
+    _routed = true;
+
+    if (!state.user.hasSecurityQuestions) {
+      // Force the user to set security questions first.
+      ZNavigator.gotoReplacement(
+        context: context,
+        const SecurityQuestionsSetup(forceSetup: true),
+      );
+    } else {
+      ZNavigator.gotoReplacement(
+        context: context,
+        const HomeView(),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
@@ -82,21 +113,21 @@ class _AuthViewState extends State<AuthView> {
       backgroundColor: scheme.surface,
       body: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) {
-          // Show session-expired message inline (once)
+          // Session expired / unauth messages
           if (state is AuthUnauthenticated &&
               state.message != null &&
               _inlineError == null) {
             setState(() => _inlineError = state.message);
           }
 
-          // Show login failures inline
+          // Login failures
           if (state is AuthFailure) {
             setState(() => _inlineError = state.message);
           }
 
-          // Navigate on success
+          // Success → route based on hasSecurityQuestions
           if (state is AuthAuthenticated) {
-            ZNavigator.gotoReplacement(context: context, HomeView());
+            _routeAfterAuth(state);
           }
         },
         child: Stack(
@@ -150,7 +181,7 @@ class _AuthViewState extends State<AuthView> {
 }
 
 // =====================================================================
-// Login card
+// Login card  (unchanged)
 // =====================================================================
 class _LoginCard extends StatelessWidget {
   final GlobalKey<FormState> formKey;
@@ -347,7 +378,7 @@ class _LoginCard extends StatelessWidget {
               },
             ),
 
-            // ── Inline error — text only, under the button
+            // ── Inline error
             if (inlineError != null) ...[
               const SizedBox(height: 12),
               Row(
@@ -378,7 +409,7 @@ class _LoginCard extends StatelessWidget {
 
             const SizedBox(height: 14),
 
-            // ── Forgot password (functionality wired later)
+            // ── Forgot password
             Center(
               child: TextButton(
                 onPressed: () {
@@ -411,7 +442,7 @@ class _LoginCard extends StatelessWidget {
 }
 
 // =====================================================================
-// Password field with eye toggle
+// Password field with eye toggle  (unchanged)
 // =====================================================================
 class _PasswordField extends StatelessWidget {
   final TextEditingController controller;

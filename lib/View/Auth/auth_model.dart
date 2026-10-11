@@ -7,6 +7,10 @@ class User {
   final int orgId;
   final String orgName;
 
+  /// True when the user has set both security questions.
+  /// When false, the app forces the user through SecurityQuestionsSetup.
+  final bool hasSecurityQuestions;
+
   const User({
     required this.userId,
     required this.staffId,
@@ -15,6 +19,7 @@ class User {
     required this.role,
     required this.orgId,
     required this.orgName,
+    required this.hasSecurityQuestions,
   });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
@@ -25,6 +30,7 @@ class User {
     role:     json['role']       as String,
     orgId:    (json['org_id']    as num).toInt(),
     orgName:  json['org_name']   as String,
+    hasSecurityQuestions: json['has_security_questions'] == true,
   );
 
   Map<String, dynamic> toJson() => {
@@ -35,6 +41,7 @@ class User {
     'role':      role,
     'org_id':    orgId,
     'org_name':  orgName,
+    'has_security_questions': hasSecurityQuestions,
   };
 }
 
@@ -91,6 +98,3 @@ class AuthResponse {
     user:  User.fromJson(json['user'] as Map<String, dynamic>),
   );
 }
-
-
-

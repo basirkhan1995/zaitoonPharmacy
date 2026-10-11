@@ -672,9 +672,11 @@ Future<void> deleteCategory(int catId) async {
 // =================================================================
 
   Future<List<SecurityQuestion>> getSecurityQuestions() async {
-    final data = await _api.get('/api/auth/security-questions');
-    if (data is! List) return const [];
-    return data
+    final res = await _api.get('/api/auth/security-questions');
+    final list = (res is Map && res['data'] is List)
+        ? res['data'] as List
+        : const [];
+    return list
         .whereType<Map>()
         .map((e) => SecurityQuestion.fromJson(Map<String, dynamic>.from(e)))
         .toList();
@@ -706,11 +708,11 @@ Future<void> deleteCategory(int catId) async {
   }
 
   Future<Map<String, dynamic>> startPasswordReset(String username) async {
-    final data = await _api.post(
+    final res = await _api.post(
       '/api/auth/forgot/start',
       data: {'username': username},
     );
-    return Map<String, dynamic>.from(data as Map);
+    return Map<String, dynamic>.from(res as Map);
   }
 
   Future<void> verifyPasswordReset({
