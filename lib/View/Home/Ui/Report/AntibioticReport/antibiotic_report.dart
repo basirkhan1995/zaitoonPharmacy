@@ -98,10 +98,10 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
   }
 
   String? _activeQuickRange() {
-    final now     = DateTime.now();
-    final nowStr  = _fmt(now);
-    final last7   = _fmt(now.subtract(const Duration(days: 7)));
-    final last30  = _fmt(now.subtract(const Duration(days: 30)));
+    final now    = DateTime.now();
+    final nowStr = _fmt(now);
+    final last7  = _fmt(now.subtract(const Duration(days: 7)));
+    final last30 = _fmt(now.subtract(const Duration(days: 30)));
 
     if (_from == last7  && _to == nowStr) return 'last7';
     if (_from == last30 && _to == nowStr) return 'last30';
@@ -225,7 +225,7 @@ class _AntibioticReportViewState extends State<AntibioticReportView> {
 
                   // Date range picker
                   Expanded(
-                    flex: 4,
+                    flex: 2,
                     child: ZRangeDatePicker(
                       height: 43,
                       label: 'Date range',
@@ -375,7 +375,7 @@ class _ReportBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final t = report.totals;
-    final polyOverLimit = t.polypharmacyPercent > 3;
+    final polyOverLimit = t.polypharmacy > 3;
 
     return Column(
       children: [
@@ -425,8 +425,9 @@ class _ReportBody extends StatelessWidget {
                     const SizedBox(height: 4),
                     _pill(
                       scheme,
-                      'Antibiotics',
-                      '${t.antibioticItems}  (${t.antibioticPercent.toStringAsFixed(1)}%)',
+                      'Antibiotic Rx',
+                      '${t.antibioticPrescriptions}  '
+                          '(${t.antibioticPercent.toStringAsFixed(1)}%)',
                       scheme.primaryContainer,
                       scheme.onPrimaryContainer,
                     ),
@@ -434,8 +435,8 @@ class _ReportBody extends StatelessWidget {
                     _pill(
                       scheme,
                       'Poly/Rx',
-                      '${t.polypharmacyPercent.toStringAsFixed(2)}%  '
-                          '${polyOverLimit ? "· OVER 3%!" : "· OK"}',
+                      '${t.polypharmacy.toStringAsFixed(2)}  '
+                          '${polyOverLimit ? "· OVER 3!" : "· OK"}',
                       polyOverLimit
                           ? scheme.errorContainer
                           : scheme.secondaryContainer,
@@ -514,14 +515,13 @@ class _TableHeader extends StatelessWidget {
       ),
       child: Row(
         children: [
-          _h('#', 40, align: TextAlign.center),
-          _h('Date', 100),
-          _h('Rx', null, flex: 2, align: TextAlign.center),
-          _h('Items', null, flex: 2, align: TextAlign.center),
-          _h('Medicines', null, flex: 2, align: TextAlign.center),
-          _h('Abx Items', null, flex: 2, align: TextAlign.center),
-          _h('Abx %', null, flex: 2, align: TextAlign.center),
-          _h('Poly %', null, flex: 2, align: TextAlign.center),
+          _h('#',       40, align: TextAlign.center),
+          _h('Date',    100),
+          _h('Rx',      null, flex: 2, align: TextAlign.center),
+          _h('Abx Rx',  null, flex: 2, align: TextAlign.center),
+          _h('Items',   null, flex: 2, align: TextAlign.center),
+          _h('Abx %',   null, flex: 2, align: TextAlign.center),
+          _h('Poly/Rx', null, flex: 2, align: TextAlign.center),
         ],
       ),
     );
@@ -563,7 +563,7 @@ class _RowTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final polyOverLimit = row.polypharmacyPercent > 3;
+    final polyOverLimit = row.polypharmacy > 3;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
@@ -611,34 +611,23 @@ class _RowTile extends StatelessWidget {
           Expanded(
             flex: 2,
             child: Text(
-              '${row.totalItems}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              '${row.totalMedicines}',
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 12.5,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 2,
-            child: Text(
-              '${row.antibioticItems}',
+              '${row.antibioticPrescriptions}',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12.5,
                 fontWeight: FontWeight.w700,
                 color: scheme.primary,
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 2,
+            child: Text(
+              '${row.totalItems}',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
@@ -668,7 +657,7 @@ class _RowTile extends StatelessWidget {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  '${row.polypharmacyPercent.toStringAsFixed(2)}%',
+                  row.polypharmacy.toStringAsFixed(2),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,

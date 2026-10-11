@@ -92,7 +92,8 @@ class _AddEditCategoryFormState extends State<AddEditCategoryForm> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       ZTextFieldEntitled(
-                        title: 'Category Name *',
+                        title: 'Category Name',
+                        isRequired: true,
                         controller: _nameCtrl,
                         validator: (v) =>
                         (v == null || v.trim().isEmpty)
@@ -103,6 +104,7 @@ class _AddEditCategoryFormState extends State<AddEditCategoryForm> {
 
                       ZTextFieldEntitled(
                         title: 'Details',
+                        keyboardInputType: TextInputType.multiline,
                         controller: _detailsCtrl,
                       ),
                     ],

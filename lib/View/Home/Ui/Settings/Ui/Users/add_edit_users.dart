@@ -178,7 +178,8 @@ class _AddEditUsersFormState extends State<AddEditUsersForm> {
 
                       // ── Username
                       ZTextFieldEntitled(
-                        title: 'Username *',
+                        title: 'Username',
+                        isRequired: true,
                         controller: _usernameCtrl,
                         validator: (v) =>
                         (v == null || v.trim().isEmpty)
@@ -189,9 +190,10 @@ class _AddEditUsersFormState extends State<AddEditUsersForm> {
 
                       // ── Password
                       ZTextFieldEntitled(
+                        isRequired: _isEdit ? false : true,
                         title: _isEdit
                             ? 'New Password (leave empty to keep current)'
-                            : 'Password *',
+                            : 'Password',
                         controller: _passwordCtrl,
                         securePassword: true,
                         validator: (v) {

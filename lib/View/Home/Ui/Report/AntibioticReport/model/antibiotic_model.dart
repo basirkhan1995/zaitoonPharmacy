@@ -1,65 +1,53 @@
 class AntibioticReportRow {
   final String date;
   final int totalPrescriptions;
-  final int totalItems;         // prescription_item rows
-  final int totalMedicines;     // SUM(quantity)
-  final int antibioticItems;    // antibiotic prescription_item rows
-  final int antibioticMedicines;// SUM(quantity) for antibiotic items
+  final int antibioticPrescriptions;
+  final int totalItems;
   final double antibioticPercent;
-  final double polypharmacyPercent;
+  final double polypharmacy;
 
   const AntibioticReportRow({
     required this.date,
     required this.totalPrescriptions,
+    required this.antibioticPrescriptions,
     required this.totalItems,
-    required this.totalMedicines,
-    required this.antibioticItems,
-    required this.antibioticMedicines,
     required this.antibioticPercent,
-    required this.polypharmacyPercent,
+    required this.polypharmacy,
   });
 
   factory AntibioticReportRow.fromJson(Map<String, dynamic> j) =>
       AntibioticReportRow(
-        date:                 j['date']?.toString() ?? '',
-        totalPrescriptions:   (j['total_prescriptions'] as num?)?.toInt() ?? 0,
-        totalItems:           (j['total_items']         as num?)?.toInt() ?? 0,
-        totalMedicines:       (j['total_medicines']     as num?)?.toInt() ?? 0,
-        antibioticItems:      (j['antibiotic_items']    as num?)?.toInt() ?? 0,
-        antibioticMedicines:  (j['antibiotic_medicines']as num?)?.toInt() ?? 0,
-        antibioticPercent:    (j['antibiotic_percent']  as num?)?.toDouble() ?? 0,
-        polypharmacyPercent:  (j['polypharmacy_percent']as num?)?.toDouble() ?? 0,
+        date:                     j['date']?.toString() ?? '',
+        totalPrescriptions:       (j['total_prescriptions']       as num?)?.toInt()    ?? 0,
+        antibioticPrescriptions:  (j['antibiotic_prescriptions']  as num?)?.toInt()    ?? 0,
+        totalItems:               (j['total_items']               as num?)?.toInt()    ?? 0,
+        antibioticPercent:        (j['antibiotic_percent']        as num?)?.toDouble() ?? 0,
+        polypharmacy:             (j['polypharmacy']              as num?)?.toDouble() ?? 0,
       );
 }
 
 class AntibioticReportTotals {
   final int totalPrescriptions;
+  final int antibioticPrescriptions;
   final int totalItems;
-  final int totalMedicines;
-  final int antibioticItems;
-  final int antibioticMedicines;
   final double antibioticPercent;
-  final double polypharmacyPercent;
+  final double polypharmacy;
 
   const AntibioticReportTotals({
     required this.totalPrescriptions,
+    required this.antibioticPrescriptions,
     required this.totalItems,
-    required this.totalMedicines,
-    required this.antibioticItems,
-    required this.antibioticMedicines,
     required this.antibioticPercent,
-    required this.polypharmacyPercent,
+    required this.polypharmacy,
   });
 
   factory AntibioticReportTotals.fromJson(Map<String, dynamic> j) =>
       AntibioticReportTotals(
-        totalPrescriptions:   (j['total_prescriptions'] as num?)?.toInt() ?? 0,
-        totalItems:           (j['total_items']         as num?)?.toInt() ?? 0,
-        totalMedicines:       (j['total_medicines']     as num?)?.toInt() ?? 0,
-        antibioticItems:      (j['antibiotic_items']    as num?)?.toInt() ?? 0,
-        antibioticMedicines:  (j['antibiotic_medicines']as num?)?.toInt() ?? 0,
-        antibioticPercent:    (j['antibiotic_percent']  as num?)?.toDouble() ?? 0,
-        polypharmacyPercent:  (j['polypharmacy_percent']as num?)?.toDouble() ?? 0,
+        totalPrescriptions:       (j['total_prescriptions']       as num?)?.toInt()    ?? 0,
+        antibioticPrescriptions:  (j['antibiotic_prescriptions']  as num?)?.toInt()    ?? 0,
+        totalItems:               (j['total_items']               as num?)?.toInt()    ?? 0,
+        antibioticPercent:        (j['antibiotic_percent']        as num?)?.toDouble() ?? 0,
+        polypharmacy:             (j['polypharmacy']              as num?)?.toDouble() ?? 0,
       );
 }
 
@@ -78,7 +66,7 @@ class AntibioticReport {
 
   factory AntibioticReport.fromJson(Map<String, dynamic> j) => AntibioticReport(
     fromDate: j['from_date'] as String? ?? '',
-    toDate:   j['to_date'] as String? ?? '',
+    toDate:   j['to_date']   as String? ?? '',
     rows: (j['rows'] as List? ?? [])
         .map((e) => AntibioticReportRow.fromJson(e as Map<String, dynamic>))
         .toList(),

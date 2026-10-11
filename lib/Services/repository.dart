@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:zpharmacy/View/Auth/auth_model.dart';
+import '../View/ForgotPassword/model/security_model.dart';
 import '../View/Home/Ui/Dashboard/model/stats_model.dart';
 import '../View/Home/Ui/Medicine/model/medicine_model.dart';
 import '../View/Home/Ui/Organization/model/org_model.dart';
@@ -663,5 +664,68 @@ Future<void> deleteCategory(int catId) async {
 
   Future<void> openBackupFolder() async {
     await _api.post('/api/backup/open-folder');
+  }
+
+
+  // =================================================================
+// SECURITY QUESTIONS
+// =================================================================
+
+  Future<List<SecurityQuestion>> getSecurityQuestions() async {
+    final data = await _api.get('/api/auth/security-questions');
+    if (data is! List) return const [];
+    return data
+        .whereType<Map>()
+        .map((e) => SecurityQuestion.fromJson(Map<String, dynamic>.from(e)))
+        .toList();
+  }
+
+  Future<void> saveSecurityQuestions({
+    required int q1Id,
+    required String a1,
+    required int q2Id,
+    required String a2,
+  }) async {
+    await _api.post(
+      '/api/auth/security-questions',
+      data: {
+        'questions': [
+          {'id': q1Id, 'answer': a1},
+          {'id': q2Id, 'answer': a2},
+        ],
+      },
+    );
+  }
+
+  Future<bool> hasSecurityQuestions() async {
+    final data = await _api.get('/api/auth/security-questions/status');
+    if (data is Map && data['data'] is Map) {
+      return data['data']['hasQuestions'] == true;
+    }
+    return false;
+  }
+
+  Future<Map<String, dynamic>> startPasswordReset(String username) async {
+    final data = await _api.post(
+      '/api/auth/forgot/start',
+      data: {'username': username},
+    );
+    return Map<String, dynamic>.from(data as Map);
+  }
+
+  Future<void> verifyPasswordReset({
+    required int userId,
+    required String answer1,
+    required String answer2,
+    required String newPassword,
+  }) async {
+    await _api.post(
+      '/api/auth/forgot/verify',
+      data: {
+        'userId':      userId,
+        'answers':     [answer1, answer2],
+        'newPassword': newPassword,
+      },
+    );
   }
 }

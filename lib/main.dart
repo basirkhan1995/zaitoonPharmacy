@@ -1,33 +1,37 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+
 import 'package:zpharmacy/Services/repository.dart';
+import 'package:zpharmacy/Services/api_services.dart';
+
+import 'package:zpharmacy/Themes/Bloc/themes_bloc.dart';
+import 'package:zpharmacy/Themes/Ui/theme.dart';
+import 'package:zpharmacy/View/ForgotPassword/bloc/forgot_password_bloc.dart';
+
+import 'package:zpharmacy/l10n/Bloc/localizations_bloc.dart';
+import 'package:zpharmacy/l10n/app_localizations.dart';
 import 'package:zpharmacy/View/Auth/auth.dart';
 import 'package:zpharmacy/View/Auth/bloc/auth_bloc.dart';
+import 'package:zpharmacy/View/Home/bloc/menu_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Dashboard/bloc/dashboard_stats_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Medicine/bloc/medicine_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Medicine/batch_bloc/batch_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Organization/bloc/organization_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Prescription/bloc/prescription_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Staff/bloc/staff_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Stock/bloc/stock_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/AntibioticReport/bloc/antibiotic_report_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/ExpiryNotify/bloc/expiry_notify_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/ExpiryAlertReport/bloc/expiry_alert_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Report/MedicineReport/bloc/medicine_report_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/StockCard/bloc/stock_card_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Report/TallySheet/bloc/tally_sheet_bloc.dart';
+import 'package:zpharmacy/View/Home/Ui/Settings/bloc/settings_tab_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Backup/bloc/backup_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Users/bloc/users_bloc.dart';
-import 'package:zpharmacy/View/Home/Ui/Settings/bloc/settings_tab_bloc.dart';
-import 'package:zpharmacy/View/Home/Ui/Staff/bloc/staff_bloc.dart';
-import 'package:zpharmacy/View/Home/Ui/Stock/bloc/stock_bloc.dart';
-import 'package:zpharmacy/View/Home/bloc/menu_bloc.dart';
-import 'package:zpharmacy/l10n/app_localizations.dart';
-import 'package:flutter/material.dart';
-import 'Services/api_services.dart';
-import 'Themes/Bloc/themes_bloc.dart';
-import 'Themes/Ui/theme.dart';
-import 'View/Home/Ui/Medicine/bloc/medicine_bloc.dart';
-import 'View/Home/Ui/Report/MedicineReport/bloc/medicine_report_bloc.dart';
-import 'l10n/Bloc/localizations_bloc.dart';
 
-void main() async{
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await ApiServices().init();
   runApp(const MyApp());
@@ -38,53 +42,105 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(create: (context) => ThemeBloc()),
-        BlocProvider(create: (context) => LocalizationBloc()),
-        BlocProvider(create: (context) => MenuBloc()),
-        BlocProvider(create: (context) => SettingsTabBloc()),
+    return RepositoryProvider(
+      create: (_) => Repositories(ApiServices()),
+      child: MultiBlocProvider(
+        providers: [
+          // ---- App-wide (no repo needed) ----
+          BlocProvider(create: (_) => ThemeBloc()),
+          BlocProvider(create: (_) => LocalizationBloc()),
+          BlocProvider(create: (_) => MenuBloc()),
+          BlocProvider(create: (_) => SettingsTabBloc()),
 
-        BlocProvider(create: (context) => AuthBloc(Repositories(ApiServices()))..add(const AuthCheckRequested()),),
-        BlocProvider(create: (context) => MedicineBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => CategoryBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => OrganizationBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => PrescriptionBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => StockBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => BatchBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => StockCardBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => MedicineReportBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => TallySheetBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => AntibioticReportBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => UsersBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => StaffBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => ExpiryAlertBloc(Repositories(ApiServices()))),
-        BlocProvider(create: (context) => ExpiryNotifyBloc(Repositories(ApiServices()))..add(ExpiryNotifyLoadRequested())),
-        BlocProvider(create: (context) => DashboardStatsBloc(Repositories(ApiServices()))..add(DashboardStatsLoadRequested())),
-        BlocProvider(create: (context) => BackupBloc(Repositories(ApiServices()))),
-      ],
-      child: BlocBuilder<LocalizationBloc, Locale>(
-        builder: (context, locale) {
-          return BlocBuilder<ThemeBloc, ThemeMode>(
-            builder: (context, themeMode) {
-              final theme = AppThemes(TextTheme.of(context));
-              return MaterialApp(
-                themeMode: themeMode,
-                locale: locale,
-                title: 'zPharmacy',
-                darkTheme: theme.dark(),
-                theme: theme.light(),
-                debugShowCheckedModeBanner: false,
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                home: const AuthView(),
-              );
-            },
-          );
-        },
+          // ---- Auth ----
+          BlocProvider(
+            create: (ctx) => AuthBloc(ctx.read<Repositories>())..add(const AuthCheckRequested()),
+          ),
+
+
+          BlocProvider(
+            create: (ctx) => ForgotPasswordBloc(ctx.read<Repositories>()),
+          ),
+          // ---- Core domain ----
+          BlocProvider(
+            create: (ctx) => MedicineBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => CategoryBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => OrganizationBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => PrescriptionBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => StockBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => BatchBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => StaffBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => UsersBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => BackupBloc(ctx.read<Repositories>()),
+          ),
+
+          // ---- Reports ----
+          BlocProvider(
+            create: (ctx) => StockCardBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => MedicineReportBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => TallySheetBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => AntibioticReportBloc(ctx.read<Repositories>()),
+          ),
+          BlocProvider(
+            create: (ctx) => ExpiryAlertBloc(ctx.read<Repositories>()),
+          ),
+
+          // ---- Eager loaders ----
+          BlocProvider(
+            create: (ctx) =>
+            ExpiryNotifyBloc(ctx.read<Repositories>())
+              ..add(ExpiryNotifyLoadRequested()),
+          ),
+          BlocProvider(
+            create: (ctx) =>
+            DashboardStatsBloc(ctx.read<Repositories>())
+              ..add(DashboardStatsLoadRequested()),
+          ),
+        ],
+        child: BlocBuilder<LocalizationBloc, Locale>(
+          builder: (context, locale) {
+            return BlocBuilder<ThemeBloc, ThemeMode>(
+              builder: (context, themeMode) {
+                final theme = AppThemes(TextTheme.of(context));
+                return MaterialApp(
+                  themeMode: themeMode,
+                  locale: locale,
+                  title: 'zPharmacy',
+                  darkTheme: theme.dark(),
+                  theme: theme.light(),
+                  debugShowCheckedModeBanner: false,
+                  localizationsDelegates:
+                  AppLocalizations.localizationsDelegates,
+                  supportedLocales: AppLocalizations.supportedLocales,
+                  home: const AuthView(),
+                );
+              },
+            );
+          },
+        ),
       ),
     );
   }
 }
-
-

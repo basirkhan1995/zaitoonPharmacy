@@ -5,6 +5,7 @@ import 'package:zpharmacy/Features/Widgets/znavigator.dart';
 import 'package:zpharmacy/Features/Widgets/ztextfield.dart';
 import 'package:zpharmacy/Services/credential_store.dart';
 import 'package:zpharmacy/Themes/Ui/theme_selector.dart';
+import 'package:zpharmacy/View/ForgotPassword/forgot_password.dart';
 import 'package:zpharmacy/l10n/app_localizations.dart';
 import 'package:zpharmacy/l10n/locale_selector.dart';
 
@@ -381,7 +382,7 @@ class _LoginCard extends StatelessWidget {
             Center(
               child: TextButton(
                 onPressed: () {
-                  // TODO: handle "forgot password" flow
+                  ZNavigator.goto(context: context, ForgotPasswordView());
                 },
                 style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
