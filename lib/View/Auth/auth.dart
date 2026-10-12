@@ -177,7 +177,9 @@ class _AuthViewState extends State<AuthView> {
             ),
 
             Positioned(
-              top: 0, left: 0, right: 0,
+              top: 0,
+              left: 0,
+              right: 0,
               child: BlocBuilder<ServerStatusCubit, ServerStatus>(
                 builder: (context, status) {
                   if (status == ServerStatus.up ||
@@ -185,22 +187,53 @@ class _AuthViewState extends State<AuthView> {
                       status == ServerStatus.checking) {
                     return const SizedBox.shrink();
                   }
+
+                  final colorScheme = Theme.of(context).colorScheme;
+                  final textTheme = Theme.of(context).textTheme;
+
                   return Material(
-                    color: Colors.orange.shade100,
+                    elevation: 2,
+                    color: colorScheme.errorContainer,
                     child: SafeArea(
                       bottom: false,
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        padding: const EdgeInsets.fromLTRB(16, 10, 8, 10),
                         child: Row(
                           children: [
-                            const Icon(Icons.cloud_off, color: Colors.orange),
-                            const SizedBox(width: 8),
-                            const Expanded(
-                              child: Text('Cannot reach the server. Retrying…'),
+                            Icon(
+                              Icons.cloud_off_rounded,
+                              size: 20,
+                              color: colorScheme.onErrorContainer,
                             ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                'Cannot reach the server.',
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: colorScheme.onErrorContainer,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
                             TextButton(
                               onPressed: () => context.read<ServerStatusCubit>().check(),
-                              child: const Text('Retry'),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colorScheme.onErrorContainer,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 6,
+                                ),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: Text(
+                                'Retry',
+                                style: textTheme.labelLarge?.copyWith(
+                                  color: colorScheme.onErrorContainer,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
                             ),
                           ],
                         ),

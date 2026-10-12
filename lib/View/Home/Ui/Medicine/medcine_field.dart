@@ -819,7 +819,9 @@ class _MedicineSearchFieldState extends State<MedicineSearchField> {
               onChanged: _onTextChanged,
               decoration: InputDecoration(
                 hintText: widget.hintText,
-                prefixIcon: const Icon(Icons.search, size: 20),
+                hintStyle: TextStyle(fontSize: 13),
+
+                prefixIcon: const Icon(Icons.search_rounded, size: 20),
                 suffixIcon: _controller.text.isEmpty
                     ? null
                     : IconButton(

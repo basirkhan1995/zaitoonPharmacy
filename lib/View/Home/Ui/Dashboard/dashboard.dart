@@ -177,7 +177,7 @@ class _DashboardHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(18, 8, 12, 8),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
+        color: scheme.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: scheme.outline.withValues(alpha: 0.14),

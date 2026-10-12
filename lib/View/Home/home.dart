@@ -144,6 +144,7 @@ class _HomeViewState extends State<HomeView> {
         }
       },
       child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surfaceContainerLow,
         body: GenericMenuWithScreen<MenuName>(
           key: const Key('main_menu'),
           padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),

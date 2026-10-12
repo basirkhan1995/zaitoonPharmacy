@@ -148,7 +148,7 @@ class DashboardStatsView extends StatelessWidget {
                   cols: cols,
                   children: [
                     _StatCard(
-                      icon: Icons.medication_outlined,
+                      icon: Icons.medical_information_outlined,
                       label: 'Medicines Catalog',
                       value: loading
                           ? null
@@ -370,7 +370,7 @@ class _StatCardState extends State<_StatCard> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 150),
         decoration: BoxDecoration(
-          color: scheme.surfaceContainerLow,
+          color: scheme.surface,
           borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: _hovered && interactive
@@ -393,15 +393,16 @@ class _StatCardState extends State<_StatCard> {
                   Row(
                     children: [
                       Container(
-                        width: 34,
-                        height: 34,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
-                          color: widget.bg,
-                          borderRadius: BorderRadius.circular(8),
+                          color: widget.bg.withValues(alpha: .5),
+                          border: Border.all(color: widget.bg),
+                          borderRadius: BorderRadius.circular(5),
                         ),
                         alignment: Alignment.center,
                         child: Icon(widget.icon,
-                            size: 18, color: widget.accent),
+                            size: 23, color: widget.accent),
                       ),
                       const SizedBox(width: 10),
                       Expanded(

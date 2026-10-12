@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:zpharmacy/Features/Widgets/toast.dart';
 import 'package:zpharmacy/Features/Widgets/z_dialog.dart';
 import 'package:zpharmacy/Features/Widgets/ztextfield.dart';
 import 'package:zpharmacy/Features/zdropdown.dart';
@@ -46,6 +47,8 @@ class _StockFormDialogState extends State<StockFormDialog> {
     final today = DateTime.now();
     String fmt(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
+
+    _invoiceDate = fmt(today);
 
     if (_isEdit) {
       final e = widget.existing!;
@@ -133,19 +136,21 @@ class _StockFormDialogState extends State<StockFormDialog> {
     });
   }
 
-  void _toast(String msg) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  void _toast(String msg,{ToastType? type, String? title}) {
+    ToastManager.show(context: context,
+        title: title,
+        message: msg, type: type ?? ToastType.info);
   }
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
     if (_invoiceDate.isEmpty) {
-      _toast('Pick an invoice date');
+      _toast(title: "Attention", 'Pick an invoice date',type: ToastType.info);
       return;
     }
     if (_needsOrg && _selectedOrg == null) {
-      _toast('Pick an organization');
+      _toast(title: "Attention",'Pick an organization',type: ToastType.info);
       return;
     }
 
@@ -243,7 +248,7 @@ class _StockFormDialogState extends State<StockFormDialog> {
           final saving = state is StockSaving;
 
           return ZFormDialog(
-            title: _isEdit ? 'Edit Invoice' : 'New Stock Invoice',
+            title: _isEdit ? 'Edit Invoice' : 'New Invoice',
             icon: Icons.medical_information_outlined,
             width: MediaQuery.of(context).size.width * 0.65,
             padding: const EdgeInsets.all(16),
@@ -255,7 +260,7 @@ class _StockFormDialogState extends State<StockFormDialog> {
               height: 16,
               child: CircularProgressIndicator(strokeWidth: 2),
             )
-                : Text(_isEdit ? 'Save' : 'Record'),
+                : Text(_isEdit ? 'Save' : 'Create'),
             child: AbsorbPointer(
               absorbing: saving,
               child: Form(
@@ -362,7 +367,6 @@ class _StockFormDialogState extends State<StockFormDialog> {
                           label: const Text('Add item'),
                         ),
                       ]),
-                      const SizedBox(height: 4),
 
                       ...List.generate(_drafts.length, (i) {
                         return Padding(
@@ -468,165 +472,158 @@ class _StockItemRowState extends State<StockItemRow> {
     final includeExpired = widget.movementType == 'EXPIRED' ||
         widget.movementType == 'DAMAGE';
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      decoration: BoxDecoration(
-        color: scheme.surfaceContainerLow,
-        borderRadius: BorderRadius.circular(3),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          // ------------- Index -------------
-          Container(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // ------------- Index -------------
+        Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: scheme.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '${widget.index}',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: scheme.onPrimaryContainer,
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // ------------- Main picker -------------
+        Expanded(
+          flex: 5,
+          child: isInbound
+              ? MedicineSearchField(
+            initial: d.medicine,
+            hintText: AppLocalizations.of(context)!.medicine,
+            onSelected: (m) => setState(() => d.medicine = m),
+          )
+              : BatchPickerField(
+            initial: d.batchOption,
+            hintText: AppLocalizations.of(context)!.medicine,
+            includeExpired: includeExpired,   // ← the key fix
+            onSelected: (b) => setState(() => d.batchOption = b),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // ------------- Inbound extras -------------
+        if (isInbound) ...[
+          // Expiry
+          SizedBox(
+            width: 150,
+            child: GenericDatePicker(
+              label: '',
+              height: 40,
+              initialGregorianDate: d.expiryDate.isEmpty
+                  ? null
+                  : d.expiryDate,
+              gregorianTextStyle: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+              ),
+              shamsiTextStyle: TextStyle(
+                fontSize: 9.5,
+                color: scheme.primary,
+                fontWeight: FontWeight.w500,
+              ),
+              onDateChanged: (date) {
+                setState(() => d.expiryDate = date);
+              },
+            ),
+          ),
+          const SizedBox(width: 8),
+
+          // Batch no
+          SizedBox(
+            width: 110,
+            child: TextFormField(
+              controller: d.batchNoCtrl,
+              decoration: _dec(scheme, 'Batch'),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+
+        // ------------- Adjustment add/deduct -------------
+        if (isAdjustment) ...[
+          SizedBox(
+            height: 40,
+            child: SegmentedButton<bool>(
+              segments: const [
+                ButtonSegment(
+                  value: false,
+                  label: Text('+'),
+                  tooltip: 'Add',
+                ),
+                ButtonSegment(
+                  value: true,
+                  label: Text('−'),
+                  tooltip: 'Deduct',
+                ),
+              ],
+              selected: {d.isNegative},
+              onSelectionChanged: (s) =>
+                  setState(() => d.isNegative = s.first),
+              style: ButtonStyle(
+                visualDensity: VisualDensity.compact,
+                padding: const WidgetStatePropertyAll(
+                    EdgeInsets.symmetric(horizontal: 10)),
+                textStyle: const WidgetStatePropertyAll(
+                    TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
+                shape: WidgetStatePropertyAll(
+                  RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+        ],
+
+        // ------------- Quantity -------------
+        SizedBox(
+          width: 80,
+          child: TextFormField(
+            controller: d.qtyCtrl,
+            keyboardType: TextInputType.number,
+            decoration: _dec(scheme, 'Qty'),
+          ),
+        ),
+        const SizedBox(width: 8),
+
+        // ------------- Note -------------
+        Expanded(
+          flex: 3,
+          child: TextFormField(
+            controller: d.noteCtrl,
+            decoration: _dec(scheme, 'Note'),
+          ),
+        ),
+
+        // ------------- Remove -------------
+        if (widget.onRemove != null) ...[
+          const SizedBox(width: 4),
+          SizedBox(
             width: 28,
             height: 28,
-            decoration: BoxDecoration(
-              color: scheme.primaryContainer,
-              shape: BoxShape.circle,
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              '${widget.index}',
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-                color: scheme.onPrimaryContainer,
-              ),
+            child: IconButton(
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              onPressed: widget.onRemove,
+              icon: Icon(Icons.close, size: 16, color: scheme.error),
+              tooltip: 'Remove',
             ),
           ),
-          const SizedBox(width: 8),
-
-          // ------------- Main picker -------------
-          Expanded(
-            flex: 5,
-            child: isInbound
-                ? MedicineSearchField(
-              initial: d.medicine,
-              hintText: AppLocalizations.of(context)!.medicine,
-              onSelected: (m) => setState(() => d.medicine = m),
-            )
-                : BatchPickerField(
-              initial: d.batchOption,
-              hintText: AppLocalizations.of(context)!.medicine,
-              includeExpired: includeExpired,   // ← the key fix
-              onSelected: (b) => setState(() => d.batchOption = b),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // ------------- Inbound extras -------------
-          if (isInbound) ...[
-            // Expiry
-            SizedBox(
-              width: 150,
-              child: GenericDatePicker(
-                label: '',
-                height: 44,
-                initialGregorianDate: d.expiryDate.isEmpty
-                    ? null
-                    : d.expiryDate,
-                gregorianTextStyle: const TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                ),
-                shamsiTextStyle: TextStyle(
-                  fontSize: 9.5,
-                  color: scheme.primary,
-                  fontWeight: FontWeight.w500,
-                ),
-                onDateChanged: (date) {
-                  setState(() => d.expiryDate = date);
-                },
-              ),
-            ),
-            const SizedBox(width: 8),
-
-            // Batch no
-            SizedBox(
-              width: 110,
-              child: TextFormField(
-                controller: d.batchNoCtrl,
-                decoration: _dec(scheme, 'Batch'),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
-          // ------------- Adjustment add/deduct -------------
-          if (isAdjustment) ...[
-            SizedBox(
-              height: 40,
-              child: SegmentedButton<bool>(
-                segments: const [
-                  ButtonSegment(
-                    value: false,
-                    label: Text('+'),
-                    tooltip: 'Add',
-                  ),
-                  ButtonSegment(
-                    value: true,
-                    label: Text('−'),
-                    tooltip: 'Deduct',
-                  ),
-                ],
-                selected: {d.isNegative},
-                onSelectionChanged: (s) =>
-                    setState(() => d.isNegative = s.first),
-                style: ButtonStyle(
-                  visualDensity: VisualDensity.compact,
-                  padding: const WidgetStatePropertyAll(
-                      EdgeInsets.symmetric(horizontal: 10)),
-                  textStyle: const WidgetStatePropertyAll(
-                      TextStyle(fontSize: 14, fontWeight: FontWeight.w700)),
-                  shape: WidgetStatePropertyAll(
-                    RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(3),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
-
-          // ------------- Quantity -------------
-          SizedBox(
-            width: 80,
-            child: TextFormField(
-              controller: d.qtyCtrl,
-              keyboardType: TextInputType.number,
-              decoration: _dec(scheme, 'Qty'),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // ------------- Note -------------
-          Expanded(
-            flex: 3,
-            child: TextFormField(
-              controller: d.noteCtrl,
-              decoration: _dec(scheme, 'Note'),
-            ),
-          ),
-
-          // ------------- Remove -------------
-          if (widget.onRemove != null) ...[
-            const SizedBox(width: 4),
-            SizedBox(
-              width: 28,
-              height: 28,
-              child: IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: widget.onRemove,
-                icon: Icon(Icons.close, size: 16, color: scheme.error),
-                tooltip: 'Remove',
-              ),
-            ),
-          ],
         ],
-      ),
+      ],
     );
   }
 
