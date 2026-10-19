@@ -52,7 +52,7 @@ class _BackupViewState extends State<BackupView> {
   Future<void> _pickAndRestore() async {
     final result = await FilePicker.pickFile(
       type: FileType.custom,
-      allowedExtensions: ['sql'],
+      allowedExtensions: ['db', 'sql'],   // ← both
     );
     if (result == null || result.path == null) return;
     if (!mounted) return;
@@ -103,10 +103,23 @@ class _BackupViewState extends State<BackupView> {
   }
 
   Future<void> _rename(BackupEntry entry) async {
-    // Strip .sql for the editable portion
-    final baseName = entry.fileName.toLowerCase().endsWith('.sql')
-        ? entry.fileName.substring(0, entry.fileName.length - 4)
-        : entry.fileName;
+    // Split into base + extension. Works for .db, .sql, or no extension.
+    final lower = entry.fileName.toLowerCase();
+    final hasDb  = lower.endsWith('.db');
+    final hasSql = lower.endsWith('.sql');
+
+    final String baseName;
+    final String currentExt; // includes dot, or '' if none
+    if (hasDb) {
+      baseName = entry.fileName.substring(0, entry.fileName.length - 3);
+      currentExt = '.db';
+    } else if (hasSql) {
+      baseName = entry.fileName.substring(0, entry.fileName.length - 4);
+      currentExt = '.sql';
+    } else {
+      baseName = entry.fileName;
+      currentExt = '';
+    }
 
     final ctrl = TextEditingController(text: baseName);
     ctrl.selection = TextSelection(
@@ -114,110 +127,144 @@ class _BackupViewState extends State<BackupView> {
       extentOffset: ctrl.text.length,
     );
 
-    final newBase = await showDialog<String>(
+    // Track the extension the user chooses. Defaults to the original.
+    String chosenExt = currentExt;
+
+    final newName = await showDialog<String>(
       context: context,
       builder: (ctx) {
         final scheme = Theme.of(ctx).colorScheme;
-        return AlertDialog(
-          elevation: 0,
-          backgroundColor: scheme.surfaceContainer,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(5),
-          ),
-          title: const Text('Rename backup'),
-          content: SizedBox(
-            width: 360,
-            child: TextField(
-              controller: ctrl,
-              autofocus: true,
-              decoration: InputDecoration(
-                labelText: 'File name',
-                suffixText: '.sql',
-                suffixStyle: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSurfaceVariant,
-                ),
-                isDense: true,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 12,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(3),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(3),
-                  borderSide: BorderSide(
-                    color: scheme.outline.withValues(alpha: 0.4),
-                  ),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(3),
-                  borderSide: BorderSide(
-                    color: scheme.primary,
-                    width: 1.2,
-                  ),
-                ),
-              ),
+        return StatefulBuilder(
+          builder: (ctx, setLocal) => AlertDialog(
+            elevation: 0,
+            backgroundColor: scheme.surfaceContainer,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(5),
             ),
-          ),
-          actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          actions: [
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text('Cancel'),
+            title: const Text('Rename backup'),
+            content: SizedBox(
+              width: 380,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: ctrl,
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      labelText: 'File name',
+                      // No forced suffix — user sees and edits the whole name.
+                      isDense: true,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 12,
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(3),
+                        borderSide: BorderSide(
+                          color: scheme.outline.withValues(alpha: 0.4),
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(3),
+                        borderSide: BorderSide(
+                          color: scheme.primary,
+                          width: 1.2,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
+                  const SizedBox(height: 12),
+                  Text(
+                    'File type',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: scheme.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  SegmentedButton<String>(
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(5),
                       ),
                     ),
-                    onPressed: () {
-                      final base = ctrl.text
-                          .trim()
-                          .replaceAll(
-                        RegExp(r'\.sql$', caseSensitive: false),
-                        '',
-                      );
-
-                      if (base.isEmpty) return;
-
-                      if (RegExp(r'[\\/:*?"<>|]').hasMatch(base)) {
-                        ScaffoldMessenger.of(ctx).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Name cannot contain  \\ / : * ? " < > |',
-                            ),
-                          ),
-                        );
-                        return;
-                      }
-                      Navigator.of(ctx).pop(base);
+                    segments: const [
+                      ButtonSegment(value: '.db',  label: Text('.db')),
+                      ButtonSegment(value: '.sql', label: Text('.sql')),
+                      ButtonSegment(value: '',     label: Text('none')),
+                    ],
+                    selected: {chosenExt},
+                    onSelectionChanged: (s) {
+                      setLocal(() => chosenExt = s.first);
                     },
-                    child: const Text('Rename'),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ],
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: FilledButton(
+                      style: FilledButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                      ),
+                      onPressed: () {
+                        // Strip any extension the user may have typed in the field
+                        final raw = ctrl.text.trim();
+                        final base = raw.replaceAll(
+                          RegExp(r'\.(db|sql)$', caseSensitive: false),
+                          '',
+                        );
+
+                        if (base.isEmpty) return;
+
+                        if (RegExp(r'[\\/:*?"<>|]').hasMatch(base)) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                'Name cannot contain  \\ / : * ? " < > |',
+                              ),
+                            ),
+                          );
+                          return;
+                        }
+
+                        Navigator.of(ctx).pop('$base$chosenExt');
+                      },
+                      child: const Text('Rename'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         );
       },
     );
 
-    if (newBase == null) return;
-    if (newBase == baseName) return;
+    if (newName == null) return;
+    if (newName == entry.fileName) return;
     if (!mounted) return;
 
     context.read<BackupBloc>().add(
-      RenameBackupEvent(entry.fileName, '$newBase.sql'),
+      RenameBackupEvent(entry.fileName, newName),
     );
   }
 

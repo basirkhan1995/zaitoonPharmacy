@@ -18,11 +18,11 @@ class ZTextFieldEntitled extends StatelessWidget {
   final Color? infoColor;
   final Widget? end;
   final bool securePassword;
-  final TextInputAction? inputAction;
+  final TextInputAction? textInputAction;
   final ValueChanged<String>? onChanged;
-  final ValueChanged<String>? onSubmit;
+  final ValueChanged<String>? onFieldSubmitted;
   final FormFieldValidator<String>? validator;
-  final TextInputType? keyboardInputType;
+  final TextInputType? keyboardType;
   final TextEditingController? controller;
   final FocusNode? focusNode;
   final Widget? trailing;
@@ -56,13 +56,13 @@ class ZTextFieldEntitled extends StatelessWidget {
     this.icon,
     this.inputFormat,
     this.validator,
-    this.onSubmit,
+    this.onFieldSubmitted,
     this.controller,
     this.onChanged,
     this.width = .5,
     this.trailing,
-    this.keyboardInputType,
-    this.inputAction,
+    this.keyboardType,
+    this.textInputAction,
     this.suggestions,
   });
 
@@ -81,18 +81,18 @@ class ZTextFieldEntitled extends StatelessWidget {
             autofocus: autoFocus,
             enabled: isEnabled,
             validator: validator,
-            textInputAction: inputAction ?? TextInputAction.done,
+            textInputAction: textInputAction ?? TextInputAction.done,
             onChanged: onChanged,
-            onFieldSubmitted: onSubmit,
+            onFieldSubmitted: onFieldSubmitted,
             obscureText: securePassword,
             inputFormatters: inputFormat,
-            keyboardType: keyboardInputType,
+            keyboardType: keyboardType,
             controller: ctrl,
             maxLength: maxLength,
             maxLines:
-            keyboardInputType == TextInputType.multiline ? null : 1,
+            keyboardType == TextInputType.multiline ? null : 1,
             minLines:
-            keyboardInputType == TextInputType.multiline ? 3 : 1,
+            keyboardType == TextInputType.multiline ? 3 : 1,
             decoration: InputDecoration(
               fillColor: Theme.of(context).colorScheme.surfaceContainer.withValues(alpha: .3),
               hoverColor: Theme.of(context).colorScheme.primary.withValues(alpha: .03),

@@ -217,7 +217,7 @@ class _AuthViewState extends State<AuthView> {
                             ),
                             const SizedBox(width: 8),
                             TextButton(
-                              onPressed: () => context.read<ServerStatusCubit>().check(),
+                              onPressed: () => context.read<ServerStatusCubit>().check(showChecking: true),
                               style: TextButton.styleFrom(
                                 foregroundColor: colorScheme.onErrorContainer,
                                 padding: const EdgeInsets.symmetric(
@@ -354,7 +354,7 @@ class _LoginCard extends StatelessWidget {
                 controller: usrName,
                 title:      tr.usrName,
                 isRequired: true,
-                onSubmit:   (_) => usrPassFn.requestFocus(),
+                onFieldSubmitted:   (_) => usrPassFn.requestFocus(),
                 validator:  (value) {
                   if (value == null || value.isEmpty) {
                     return tr.required(tr.usrName);
@@ -545,7 +545,7 @@ class _PasswordField extends StatelessWidget {
           title:          label,
           isRequired:     true,
           securePassword: obscure,
-          onSubmit:       onSubmit,
+          onFieldSubmitted:       onSubmit,
           validator:      validator,
         ),
         Positioned(

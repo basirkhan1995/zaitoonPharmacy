@@ -10,20 +10,21 @@ class ServerStatusCubit extends Cubit<ServerStatus> {
 
   ServerStatusCubit(this.baseUrl) : super(ServerStatus.unknown);
 
-  Future<void> check() async {
-    emit(ServerStatus.checking);
+  Future<void> check({bool showChecking = false}) async {
+    if (showChecking) emit(ServerStatus.checking);
     try {
       final r = await http
           .get(Uri.parse('$baseUrl/health'))
           .timeout(const Duration(seconds: 2));
-      emit(r.statusCode == 200 ? ServerStatus.up : ServerStatus.down);
+      final next = r.statusCode == 200 ? ServerStatus.up : ServerStatus.down;
+      if (next != state) emit(next); // avoid redundant emissions
     } catch (_) {
-      emit(ServerStatus.down);
+      if (state != ServerStatus.down) emit(ServerStatus.down);
     }
   }
 
   void startPolling() {
-    check();
+    check(showChecking: true);
     _poll?.cancel();
     _poll = Timer.periodic(const Duration(seconds: 3), (_) {
       if (state != ServerStatus.up) check();

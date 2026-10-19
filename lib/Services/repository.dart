@@ -165,7 +165,7 @@ Future<void> deleteCategory(int catId) async {
 
   Future<Organization> updateOrganization(
       int orgId, OrganizationRequest req) async {
-    await _api.uploadFile(
+    await _api.uploadFilePut(
       '/api/organizations/$orgId',
       data: _orgFormData(req),
     );
@@ -231,7 +231,6 @@ Future<void> deleteCategory(int catId) async {
   Future<void> cancelPrescription(int id) async {
     await _api.delete('/api/prescriptions/$id');
   }
-
   // =================================================================
 // STOCK — invoices
 // =================================================================

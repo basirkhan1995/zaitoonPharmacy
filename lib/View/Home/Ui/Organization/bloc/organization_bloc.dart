@@ -24,20 +24,21 @@ class OrganizationBloc extends Bloc<OrganizationEvent, OrganizationState> {
       ? (state as OrganizationWithItems).items
       : const [];
 
-  Future<void> _onLoad(OrganizationLoadRequested event,
-      Emitter<OrganizationState> emit) async {
+  Future<void> _onLoad(
+      OrganizationLoadRequested event, Emitter<OrganizationState> emit) async {
     emit(const OrganizationLoading());
     try {
-      await Future.delayed(Duration(milliseconds: 500));
       final items = await _repo.getOrganizations();
       emit(OrganizationLoaded(items));
     } on ApiException catch (e) {
       emit(OrganizationFailure(e.message));
+    } catch (e) {
+      emit(OrganizationFailure(e.toString()));
     }
   }
 
-  Future<void> _onSelect(OrganizationSelectRequested event,
-      Emitter<OrganizationState> emit) async {
+  Future<void> _onSelect(
+      OrganizationSelectRequested event, Emitter<OrganizationState> emit) async {
     final items = _currentItems;
     emit(const OrganizationLoading());
     try {
@@ -45,63 +46,70 @@ class OrganizationBloc extends Bloc<OrganizationEvent, OrganizationState> {
       emit(OrganizationLoaded(items, selected: org));
     } on ApiException catch (e) {
       emit(OrganizationFailure(e.message));
+    } catch (e) {
+      emit(OrganizationFailure(e.toString()));
     }
   }
 
-  Future<void> _onClear(OrganizationClearSelection event,
-      Emitter<OrganizationState> emit) async {
+  Future<void> _onClear(
+      OrganizationClearSelection event, Emitter<OrganizationState> emit) async {
     emit(OrganizationLoaded(_currentItems));
   }
 
-  Future<void> _onCreate(OrganizationCreateRequested event,
-      Emitter<OrganizationState> emit) async {
+  Future<void> _onCreate(
+      OrganizationCreateRequested event, Emitter<OrganizationState> emit) async {
     emit(OrganizationSaving(_currentItems));
     try {
       await _repo.createOrganization(event.request);
       final items = await _repo.getOrganizations();
-      emit(OrganizationLoaded(items));
       emit(OrganizationActionSuccess(items, 'Organization created'));
     } on ApiException catch (e) {
       emit(OrganizationFailure(e.message));
+    } catch (e) {
+      emit(OrganizationFailure(e.toString()));
     }
   }
 
-  Future<void> _onUpdate(OrganizationUpdateRequested event,
-      Emitter<OrganizationState> emit) async {
+  Future<void> _onUpdate(
+      OrganizationUpdateRequested event, Emitter<OrganizationState> emit) async {
     emit(OrganizationSaving(_currentItems));
     try {
       await _repo.updateOrganization(event.orgId, event.request);
       final items = await _repo.getOrganizations();
-      emit(OrganizationLoaded(items));
       emit(OrganizationActionSuccess(items, 'Organization updated'));
     } on ApiException catch (e) {
       emit(OrganizationFailure(e.message));
+    } catch (e) {
+      emit(OrganizationFailure(e.toString()));
     }
   }
 
-  Future<void> _onDelete(OrganizationDeleteRequested event,
-      Emitter<OrganizationState> emit) async {
+  Future<void> _onDelete(
+      OrganizationDeleteRequested event, Emitter<OrganizationState> emit) async {
     emit(OrganizationSaving(_currentItems));
     try {
       await _repo.deleteOrganization(event.orgId);
       final items = await _repo.getOrganizations();
-      emit(OrganizationLoaded(items));
       emit(OrganizationActionSuccess(items, 'Organization deleted'));
     } on ApiException catch (e) {
       emit(OrganizationFailure(e.message));
+    } catch (e) {
+      emit(OrganizationFailure(e.toString()));
     }
   }
 
-  Future<void> _onDeleteLogo(OrganizationDeleteLogoRequested event,
+  Future<void> _onDeleteLogo(
+      OrganizationDeleteLogoRequested event,
       Emitter<OrganizationState> emit) async {
     emit(OrganizationSaving(_currentItems));
     try {
       await _repo.deleteOrganizationLogo(event.orgId);
       final items = await _repo.getOrganizations();
-      emit(OrganizationLoaded(items));
       emit(OrganizationActionSuccess(items, 'Logo removed'));
     } on ApiException catch (e) {
       emit(OrganizationFailure(e.message));
+    } catch (e) {
+      emit(OrganizationFailure(e.toString()));
     }
   }
 }

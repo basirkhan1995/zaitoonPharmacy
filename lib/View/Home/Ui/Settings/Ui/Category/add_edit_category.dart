@@ -104,7 +104,7 @@ class _AddEditCategoryFormState extends State<AddEditCategoryForm> {
 
                       ZTextFieldEntitled(
                         title: 'Details',
-                        keyboardInputType: TextInputType.multiline,
+                        keyboardType: TextInputType.multiline,
                         controller: _detailsCtrl,
                       ),
                     ],

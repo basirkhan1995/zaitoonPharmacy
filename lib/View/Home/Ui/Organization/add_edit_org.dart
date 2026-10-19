@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Features/Widgets/ztextfield.dart';
@@ -26,6 +27,14 @@ class _AddEditOrganizationDialogState extends State<AddEditOrganizationDialog> {
   late final TextEditingController _address;
   late final TextEditingController _note;
 
+  // One focus node per text field, in visual order.
+  late final FocusNode _nameFocus;
+  late final FocusNode _contactFocus;
+  late final FocusNode _phoneFocus;
+  late final FocusNode _emailFocus;
+  late final FocusNode _addressFocus;
+  late final FocusNode _noteFocus;
+
   File? _logoFile;
 
   bool get _isEdit => widget.organization != null;
@@ -40,6 +49,18 @@ class _AddEditOrganizationDialogState extends State<AddEditOrganizationDialog> {
     _phone   = TextEditingController(text: o?.phone ?? '');
     _address = TextEditingController(text: o?.address ?? '');
     _note    = TextEditingController(text: o?.note ?? '');
+
+    _nameFocus    = FocusNode(debugLabel: 'org_name');
+    _contactFocus = FocusNode(debugLabel: 'org_contact');
+    _phoneFocus   = FocusNode(debugLabel: 'org_phone');
+    _emailFocus   = FocusNode(debugLabel: 'org_email');
+    _addressFocus = FocusNode(debugLabel: 'org_address');
+    _noteFocus    = FocusNode(debugLabel: 'org_note');
+
+    // Auto-focus the first field after the dialog builds.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _nameFocus.requestFocus();
+    });
   }
 
   @override
@@ -50,10 +71,47 @@ class _AddEditOrganizationDialogState extends State<AddEditOrganizationDialog> {
     _phone.dispose();
     _address.dispose();
     _note.dispose();
+
+    _nameFocus.dispose();
+    _contactFocus.dispose();
+    _phoneFocus.dispose();
+    _emailFocus.dispose();
+    _addressFocus.dispose();
+    _noteFocus.dispose();
     super.dispose();
   }
 
+  // -------------------- desktop-friendly file picker --------------------
+  Future<void> _pickLogo() async {
+    try {
+      final PlatformFile? file = await FilePicker.pickFile(
+        type: FileType.custom,
+        allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp', 'gif'],
+      );
 
+      if (file == null) return;
+
+      if (file.path == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+              content: Text('Unable to read file path on this platform')),
+        );
+        return;
+      }
+
+      setState(() => _logoFile = File(file.path!));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not pick image: $e')),
+      );
+    }
+  }
+
+  Future<void> _clearLogo() async {
+    setState(() => _logoFile = null);
+  }
 
   void _submit() {
     if (!(_formKey.currentState?.validate() ?? false)) return;
@@ -114,47 +172,80 @@ class _AddEditOrganizationDialogState extends State<AddEditOrganizationDialog> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Logo picker
+                      // ---------------- Logo picker ----------------
                       Center(
-                        child: GestureDetector(
-                          onTap: (){},
-                          child: Container(
-                            width: 90,
-                            height: 90,
-                            decoration: BoxDecoration(
-                              color: scheme.primaryContainer,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: scheme.outlineVariant,
-                                width: 1,
-                              ),
-                            ),
-                            clipBehavior: Clip.antiAlias,
-                            child: _logoFile != null
-                                ? Image.file(_logoFile!, fit: BoxFit.cover)
-                                : (widget.organization?.hasLogo == true
-                                ? Image.network(
-                              '${ApiServices.baseUrl}/api/organizations/${widget.organization!.orgId}/logo',
-                              fit: BoxFit.cover,
-                            )
-                                : Column(
-                              mainAxisAlignment:
-                              MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.add_a_photo_outlined,
-                                    size: 28,
-                                    color: scheme.onPrimaryContainer),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Add logo',
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    color: scheme.onPrimaryContainer,
+                        child: Stack(
+                          children: [
+                            GestureDetector(
+                              onTap: saving ? null : _pickLogo,
+                              child: Container(
+                                width: 90,
+                                height: 90,
+                                decoration: BoxDecoration(
+                                  color: scheme.primaryContainer,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: scheme.outlineVariant,
+                                    width: 1,
                                   ),
                                 ),
-                              ],
-                            )),
-                          ),
+                                clipBehavior: Clip.antiAlias,
+                                child: _logoFile != null
+                                    ? Image.file(_logoFile!,
+                                    fit: BoxFit.cover)
+                                    : (widget.organization?.hasLogo == true
+                                    ? Image.network(
+                                  '${ApiServices.baseUrl}/api/organizations/${widget.organization!.orgId}/logo',
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, _, _) => Icon(
+                                    Icons.broken_image_outlined,
+                                    size: 28,
+                                    color:
+                                    scheme.onPrimaryContainer,
+                                  ),
+                                )
+                                    : Column(
+                                  mainAxisAlignment:
+                                  MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.add_a_photo_outlined,
+                                      size: 28,
+                                      color: scheme
+                                          .onPrimaryContainer,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'Add logo',
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: scheme
+                                            .onPrimaryContainer,
+                                      ),
+                                    ),
+                                  ],
+                                )),
+                              ),
+                            ),
+                            if (_logoFile != null ||
+                                widget.organization?.hasLogo == true)
+                              Positioned(
+                                top: 2,
+                                right: 2,
+                                child: InkWell(
+                                  onTap: saving ? null : _clearLogo,
+                                  child: Container(
+                                    decoration: BoxDecoration(
+                                      color: scheme.surface,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: const EdgeInsets.all(2),
+                                    child: Icon(Icons.close,
+                                        size: 14, color: scheme.error),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                       const SizedBox(height: 16),
@@ -162,8 +253,10 @@ class _AddEditOrganizationDialogState extends State<AddEditOrganizationDialog> {
                       ZTextFieldEntitled(
                         title: 'Organization name',
                         controller: _name,
-                        validator: (v) =>
-                        (v == null || v.trim().isEmpty)
+                        focusNode: _nameFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _contactFocus.requestFocus(),
+                        validator: (v) => (v == null || v.trim().isEmpty)
                             ? 'Required'
                             : null,
                       ),
@@ -172,30 +265,50 @@ class _AddEditOrganizationDialogState extends State<AddEditOrganizationDialog> {
                       ZTextFieldEntitled(
                         title: 'Contact person',
                         controller: _contact,
+                        focusNode: _contactFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _phoneFocus.requestFocus(),
                       ),
                       const SizedBox(height: 12),
 
                       ZTextFieldEntitled(
                         title: 'Phone',
                         controller: _phone,
+                        focusNode: _phoneFocus,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.phone,
+                        onFieldSubmitted: (_) => _emailFocus.requestFocus(),
                       ),
                       const SizedBox(height: 12),
 
                       ZTextFieldEntitled(
                         title: 'Email',
                         controller: _email,
+                        focusNode: _emailFocus,
+                        textInputAction: TextInputAction.next,
+                        keyboardType: TextInputType.emailAddress,
+                        onFieldSubmitted: (_) => _addressFocus.requestFocus(),
                       ),
                       const SizedBox(height: 12),
 
                       ZTextFieldEntitled(
                         title: 'Address',
                         controller: _address,
+                        focusNode: _addressFocus,
+                        textInputAction: TextInputAction.next,
+                        onFieldSubmitted: (_) => _noteFocus.requestFocus(),
                       ),
                       const SizedBox(height: 12),
 
                       ZTextFieldEntitled(
                         title: 'Note',
                         controller: _note,
+                        focusNode: _noteFocus,
+                        textInputAction: TextInputAction.done,
+                        // Enter on last field → submit
+                        onFieldSubmitted: (_) {
+                          if (!saving) _submit();
+                        },
                       ),
                     ],
                   ),

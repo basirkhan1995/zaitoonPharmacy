@@ -1,3 +1,4 @@
+import 'dart:ui' show AppExitResponse;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:zpharmacy/Services/repository.dart';
@@ -27,18 +28,59 @@ import 'package:zpharmacy/View/Home/Ui/Settings/bloc/settings_tab_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Backup/bloc/backup_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Category/bloc/category_bloc.dart';
 import 'package:zpharmacy/View/Home/Ui/Settings/Ui/Users/bloc/users_bloc.dart';
+import 'Services/config.dart';
+import 'Services/server_manager.dart';
 import 'Services/server_status.dart';
 import 'View/ForgotPassword/SecurityQuestions/security_questions_bloc.dart';
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Initialize shared services
   await ApiServices().init();
+
+  // 2. Spawn the Node.js server process
+ // await ServerService().start();
+
+  // 3. Wait until it's actually reachable (up to 15s)
+  //    We don't abort on failure — the ServerStatusCubit will show "down"
+  //    and the Retry banner will let the user try again.
+  //await ServerService().waitUntilReady();
+
+  // 4. Launch the UI
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
 
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  late final AppLifecycleListener _lifecycleListener;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Fires when the user closes the app window (X button).
+    // This is the *clean* shutdown path.
+    // The Node server's --parent-pid watcher covers the force-kill path.
+    _lifecycleListener = AppLifecycleListener(
+      onExitRequested: () async {
+        await ServerService().stop();
+        return AppExitResponse.exit;
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycleListener.dispose();
+    super.dispose();
+  }
   @override
   Widget build(BuildContext context) {
     return RepositoryProvider(
@@ -46,8 +88,7 @@ class MyApp extends StatelessWidget {
       child: MultiBlocProvider(
         providers: [
           BlocProvider(
-            create: (_) =>
-            ServerStatusCubit('http://localhost:3000')..startPolling(),
+            create: (_) => ServerStatusCubit(AppConfig.apiBaseUrl)..startPolling(),
           ),
 
           BlocProvider(

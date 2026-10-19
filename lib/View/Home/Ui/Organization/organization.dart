@@ -257,6 +257,16 @@ class _OrganizationViewState extends State<OrganizationView> {
             // =====================================================
             Expanded(
               child: BlocBuilder<OrganizationBloc, OrganizationState>(
+                buildWhen: (prev, curr) {
+                  // Rebuild on any items change, any failure, and any load/select state.
+                  if (curr is OrganizationFailure) return true;
+                  if (curr is OrganizationLoading) return true;
+                  if (curr is OrganizationWithItems && prev is OrganizationWithItems) {
+                    return !identical(prev.items, curr.items) ||
+                        prev is OrganizationSaving != (curr is OrganizationSaving);
+                  }
+                  return true; // any other transition (Initial → Loaded, etc.)
+                },
                 builder: (context, state) {
                   if (state is OrganizationLoading) {
                     return UniversalShimmer.accountList(

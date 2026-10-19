@@ -168,7 +168,7 @@ class _ForgotPasswordBodyState extends State<_ForgotPasswordBody> {
           controller: _usernameCtrl,
           title: 'Username',
           isRequired: true,
-          onSubmit: (_) => _onStart(),
+          onFieldSubmitted: (_) => _onStart(),
           validator: (v) =>
           (v == null || v.trim().isEmpty) ? 'Required' : null,
         ),

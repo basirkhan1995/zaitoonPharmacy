@@ -279,9 +279,9 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                                 isRequired: true,
                                 controller: _registerNo,
                                 focusNode: _regFocus,
-                                inputAction: TextInputAction.next,
+                                textInputAction: TextInputAction.next,
                                 // Enter → jump to Patient Name
-                                onSubmit: (_) => _nameFocus.requestFocus(),
+                                onFieldSubmitted: (_) => _nameFocus.requestFocus(),
                                 validator: (v) =>
                                 (v == null || v.trim().isEmpty)
                                     ? 'Required'
@@ -297,9 +297,9 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                                 isRequired: true,
                                 controller: _patientName,
                                 focusNode: _nameFocus,
-                                inputAction: TextInputAction.next,
+                                textInputAction: TextInputAction.next,
                                 // Enter → jump to first medicine
-                                onSubmit: (_) => _focusFirstMedicine(),
+                                onFieldSubmitted: (_) => _focusFirstMedicine(),
                                 validator: (v) =>
                                 (v == null || v.trim().isEmpty)
                                     ? 'Required'
@@ -313,7 +313,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                               child: ZTextFieldEntitled(
                                 title: AppLocalizations.of(context)!.age,
                                 controller: _age,
-                                inputAction: TextInputAction.next,
+                                textInputAction: TextInputAction.next,
                                 validator: (v) {
                                   if (v == null || v.trim().isEmpty) return null;
                                   final n = int.tryParse(v.trim());
@@ -351,7 +351,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                                 child: ZTextFieldEntitled(
                                   title: 'Address',
                                   controller: _address,
-                                  inputAction: TextInputAction.next,
+                                  textInputAction: TextInputAction.next,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -360,7 +360,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                                 child: ZTextFieldEntitled(
                                   title: 'Doctor',
                                   controller: _doctorName,
-                                  inputAction: TextInputAction.next,
+                                  textInputAction: TextInputAction.next,
                                 ),
                               ),
                               const SizedBox(width: 12),
@@ -369,7 +369,7 @@ class _AddEditPrescriptionFormState extends State<AddEditPrescriptionForm> {
                                 child: ZTextFieldEntitled(
                                   title: 'Diagnosis',
                                   controller: _diagnosis,
-                                  inputAction: TextInputAction.done,
+                                  textInputAction: TextInputAction.done,
                                 ),
                               ),
                             ],
